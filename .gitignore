@@ -1,0 +1,17 @@
+# Node artifact files
+node_modules/
+
+# JetBrains IDE
+.idea/
+
+# Assets that are auto generated
+assets/*
+package-lock.json
+
+!assets/
+!assets/guild-xp-requirements.json
+!assets/guild-application-layouts/
+
+# Configs
+config.json
+config.prod.json

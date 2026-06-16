@@ -33,7 +33,14 @@ module.exports = {
                 const worldEvents = await WynnApiHelper.getWorldEvents();
                 const event = _.find(worldEvents, event => event.name === eventType);
 
-                worldEvent = { predicted: false, datetime_utc: fileDate };
+                if (event?.schedule) {
+                    const eventTime = new Date(event?.schedule);
+
+                    if (eventTime > new Date()) {
+                        this.setManualTime(eventTime, eventType, 'Wynncraft API');
+                        worldEvent = { predicted: false, datetime_utc: eventTime.toISOString() };
+                    }
+                }
             }
 
             // Otherwise prediction is 3d 16h later
@@ -41,6 +48,13 @@ module.exports = {
                 let predictionDate = fileDate ? _.cloneDeep(fileDate) : new Date();
                 predictionDate.setDate(predictionDate.getDate() + 3);
                 predictionDate.setHours(predictionDate.getHours() + 16);
+
+                if (predictionDate < new Date()) {
+                    predictionDate = new Date();
+                    predictionDate.setDate(predictionDate.getDate() + 3);
+                    predictionDate.setHours(predictionDate.getHours() + 16);
+                }
+
                 worldEvent = { predicted: true, datetime_utc: predictionDate };
             }
 

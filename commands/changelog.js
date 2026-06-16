@@ -87,6 +87,10 @@ function getChangelog() {
 				description: 'Show for which party a leader was set.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
 				description: 'Fix spam of pings during the initial Anni reveal if the Discord API is slow.' },
+			{ type: TYPE_ENUM.ADD, command: '/role-giver',
+				description: 'Add a command for the bot to give out or remove roles from users.' },
+			{ type: TYPE_ENUM.EDIT, command: '/help',
+				description: 'Add dev server to help page.' },
 		]},
 
 		{ date: '2026-05-30', version: '1.0.3.4', content: [

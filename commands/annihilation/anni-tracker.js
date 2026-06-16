@@ -889,6 +889,7 @@ module.exports = {
 			});
 		}
 
+		let initialPinged = false;
 		let oneHourPinged = false;
 		let thirtyMinutePinged = false;
 		async function processAnniData(newAnniData) {
@@ -908,20 +909,21 @@ module.exports = {
 				const ANNI_MESSAGE = 'Anni starts <t:' + Math.floor(new Date(newAnniData.datetime_utc).getTime() / 1000) + ':R> ' + `<@&${ pingRole }>!`;
 
 				// Ping 30m in advance
-				if (!thirtyMinutePinged && !disable30mPing && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
+				if (!disable30mPing && !thirtyMinutePinged && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
 					thirtyMinutePinged = true;
 					oneHourPinged = true;
 					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
 				}
 
 				// Ping 1h in advance
-				else if (!thirtyMinutePinged && !disable1hPing && !oneHourPinged && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
+				else if (!disable1hPing && !thirtyMinutePinged && !oneHourPinged && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
 					oneHourPinged = true;
 					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
 				}
 
 				// Ping if it just swapped from prediction to confirmed
-				else if (!thirtyMinutePinged && !oneHourPinged && (!anniData || anniData.predicted)) {
+				else if (!initialPinged && !thirtyMinutePinged && !oneHourPinged && (!anniData || anniData.predicted)) {
+					initialPinged = true;
 					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
 				}
 			}
@@ -947,6 +949,7 @@ module.exports = {
 				message = await DiscordHelper.send(channel, 'New data detected...');
 				thread = null;
 				trackerId = new Date().getTime() + Math.floor(Math.random() * 100);
+				initialPinged = false;
 				oneHourPinged = false;
 				thirtyMinutePinged = false;
 

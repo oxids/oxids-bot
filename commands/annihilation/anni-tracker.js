@@ -766,7 +766,8 @@ module.exports = {
 
 							let previousLeader = null;
 							const index = participants.indexOf(participant);
-							for (let i = Math.floor(index / 10) * 10; i < (Math.floor(index / 10) * 10) + 10 && i < participants.length; i++) {
+							party = Math.floor(index / 10) + 1;
+							for (let i = (party - 1) * 10; i < party * 10 && i < participants.length; i++) {
 								const p = participants[i];
 								if (!p?.partyLeader) {
 									continue;
@@ -785,7 +786,8 @@ module.exports = {
 								modalInteraction.deferUpdate();
 							} else {
 								messagesToDelete.push(await DiscordHelper.reply(modalInteraction, {
-									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username) + ' as a party leader!'
+									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username)
+										+ ' as a party leader for party ' + party + '!'
 								}));
 							}
 

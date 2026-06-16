@@ -24,7 +24,9 @@ module.exports = {
 		.addStringOption(option =>
 			option.setName('world-event')
 				.setDescription('The world event to track (Default: ' + WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION + ')')
-				.addChoices(...(_.map(Object.keys(WorldEventsHelper.WORLD_EVENTS_ENUM), key => WorldEventsHelper.WORLD_EVENTS_ENUM[key]))))
+				.addChoices(...(_.map(Object.keys(WorldEventsHelper.WORLD_EVENTS_ENUM), key => {
+					return { name: WorldEventsHelper.WORLD_EVENTS_ENUM[key], value: WorldEventsHelper.WORLD_EVENTS_ENUM[key] };
+				}))))
 		.addRoleOption(option =>
 			option.setName('ping-role')
 				.setDescription('The role to be pinged (Default: None)'))
@@ -143,7 +145,7 @@ module.exports = {
 			resendOnUpdate = interaction.options.resendOnUpdate;
 			disable1hPing = interaction.options.disable1hPing;
 			disable30mPing = interaction.options.disable30mPing;
-			worldEvent = interaction.options.worldEvent;
+			worldEvent = interaction.options.worldEvent || WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION;
 
 			if (!message) {
 				message = await DiscordHelper.send(channel, 'Old message not found, so sending new one...');

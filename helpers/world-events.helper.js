@@ -9,6 +9,10 @@ let lastEventsLoadingDate;
 
 const WORLD_EVENT_TIMES_FILENAME = './assets/world-events-times.json';
 
+const WORLD_EVENTS_ENUM = {
+    PRELUDE_TO_ANNIHILATION: 'Prelude to Annihilation',
+};
+
 module.exports = {
     async getWorldEventInfo(eventType) {
         try {
@@ -52,14 +56,10 @@ module.exports = {
     async setManualTime(startTime, eventType, origin) {
         let times = FileHelper.readFromFile(WORLD_EVENT_TIMES_FILENAME);
         times = _.filter(times, time => time.type !== eventType);
-        times.push({ type: eventType, date: startTime });
+        times.push({ type: eventType, date: startTime.getTime() });
 
         FileHelper.writeToFile(WORLD_EVENT_TIMES_FILENAME, times);
         LogHelper.writeToLog(eventType + ' start was set to ' + startTime.toISOString() + ' by ' + origin);
     },
     WORLD_EVENTS_ENUM: WORLD_EVENTS_ENUM
 }
-
-const WORLD_EVENTS_ENUM = {
-    PRELUDE_TO_ANNIHILATION: 'Prelude to Annihilation',
-};

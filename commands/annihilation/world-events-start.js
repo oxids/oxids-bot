@@ -17,7 +17,9 @@ module.exports = {
 		.addStringOption(option =>
 			option.setName('world-event')
 				.setDescription('The world event to start (Default: ' + WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION + ')')
-				.addChoices(...(_.map(Object.keys(WorldEventsHelper.WORLD_EVENTS_ENUM), key => WorldEventsHelper.WORLD_EVENTS_ENUM[key]))))
+				.addChoices(...(_.map(Object.keys(WorldEventsHelper.WORLD_EVENTS_ENUM), key => {
+					return { name: WorldEventsHelper.WORLD_EVENTS_ENUM[key], value: WorldEventsHelper.WORLD_EVENTS_ENUM[key] };
+				}))))
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.setDMPermission(false),
 	async execute(interaction) {
@@ -51,7 +53,7 @@ module.exports = {
 		startTime.setHours(startTime.getHours() + hours);
 		startTime.setMinutes(startTime.getMinutes() + minutes);
 
-		WorldEventsHelper.setManualTime(startTime.getTime(), worldEvent,
+		WorldEventsHelper.setManualTime(startTime, worldEvent,
 			interaction.user.username + ' (' + interaction.user.id + ')');
 		DiscordHelper.reply(interaction, { content: 'Set ' + worldEvent + ' start manually to <t:'
 			+ Math.floor(startTime.getTime() / 1000) + '>' });

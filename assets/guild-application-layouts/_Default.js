@@ -3,8 +3,6 @@ const DiscordHelper = require('../../helpers/discord.helper.js');
 const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
 const WynnApiHelper = require('../../helpers/wynn-api.helper.js');
-const PunishmentHelper = require("../../helpers/punishment.helper");
-const FormatHelper = require("../../helpers/format.helper");
 const VerificationHelper = require("../../helpers/verification.helper");
 
 const SHOWN_PROFESSIONS = [
@@ -28,11 +26,7 @@ module.exports = {
         const buttons = [
             new ButtonBuilder()
                 .setCustomId(trackerId + ':' + 'recruit')
-                .setLabel('Temporary member application')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId(trackerId + ':' + 'recruiter')
-                .setLabel('Permanent member application')
+                .setLabel('Apply')
                 .setStyle(ButtonStyle.Primary),
         ].filter(b => !!b);
 
@@ -40,18 +34,9 @@ module.exports = {
 
         const embeds = DiscordHelper.getEmbeds([{
             name: '',
-            value: 'Please click on the role you would like to apply for!' +
-                '\n\n**Temporary members**' +
-                '\nTemporary members are only in PROF for the profession boosts and can leave at any time. Apply via the button or just message any Recruiter or higher ingame to get invited!' +
+            value: 'Please click the "Apply" button to apply to our guild!' +
                 '\n\nRequirements:' +
-                '\n- At least one class with a gathering profession on level 110' +
-
-                '\n\n**Permanent members**' +
-                '\nPermanent members are members of PROF who stay long term and help the guild reclaim territories in case we get attacked.' +
-                '\n\nRequirements:' +
-                '\n- At least one class with combat level 104 or higher' +
-                '\n- Access to at least one decent war build' +
-                '\n- At least two weeks of being in PROF as a temporary member before applying'
+                '\n- At least one class with combat level 120 or higher'
         }], 1, 'Guild applications', null, 'Blue');
 
         return {
@@ -66,69 +51,6 @@ module.exports = {
 
         switch (_.last(i.customId.split(':'))) {
             case 'recruit':
-                customId = 'modal-recruit-' + i.user.id + '-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100);
-                modal = new ModalBuilder({
-                    customId: customId,
-                    title: 'Temporary member application'
-                });
-
-                modal.addLabelComponents(
-                    new LabelBuilder()
-                        .setLabel('Minecraft username')
-                        .setTextInputComponent(new TextInputBuilder()
-                            .setCustomId('username')
-                            .setRequired(true)
-                            .setStyle(TextInputStyle.Short)
-                            .setValue((verifiedAccount
-                                ? await WynnApiHelper.getPlayerName(verifiedAccount.minecraftUUID)
-                                : null) || '')
-                            .setPlaceholder('Your Minecraft Username (e.g. oxids)')
-                            .setMaxLength(16)),
-                );
-
-                await DiscordHelper.showModal(i, modal);
-                modalInteraction = await DiscordHelper.awaitModalSubmit(i, {
-                    filter: (i2) => i2.customId === customId && i2.user.id === i.user.id,
-                    time: 1000 * 60 * 30
-                });
-
-                if (!modalInteraction) {
-                    break;
-                }
-
-                let username = modalInteraction.fields.getTextInputValue('username');
-                if (!username) {
-                    break;
-                }
-
-                username = username.replace(/[^a-zA-Z0-9_]/g, '');
-                user = await WynnApiHelper.getPlayerInfo(username);
-                if (!user) {
-                    DiscordHelper.reply(modalInteraction, { content: 'The account ' + username + ' could not be found!', ephemeral: true });
-                    break;
-                }
-
-                applicationChannel = await DiscordHelper.fetch(i.guild?.channels, recruitOutputChannel);
-                if (!applicationChannel) {
-                    DiscordHelper.reply(modalInteraction, { content: 'There was an issue fetching the application channel. Please contact oxids.', ephemeral: true });
-                    break;
-                }
-
-                message = await DiscordHelper.send(applicationChannel, { content: '# There is a new application!\n\nFetching data...' });
-                if (!message) {
-                    DiscordHelper.reply(modalInteraction, { content: 'There was an issue sending a application message to the application channel. Please contact oxids.', ephemeral: true });
-                    break;
-                }
-
-                messageText = '`' + (username ?? '') + '` would like to join as a temp member, somebody please invite them.';
-                messageText += '\nDiscord: ' + `<@${i.member.id}> (\`${i.user.username}\`)`;
-                messageText += '\n\n`/guild invite ' + username + '`';
-
-                DiscordHelper.edit(message, messageText);
-                DiscordHelper.reply(modalInteraction, { content: 'Your application was submitted! You should be hearing back from us within 24 hours.', ephemeral: true });
-                break;
-
-            case 'recruiter':
                 if (!verifiedAccount) {
                     DiscordHelper.reply(i, { content: 'Please verify your Discord account before applying!', ephemeral: true });
                     break;
@@ -137,17 +59,16 @@ module.exports = {
                 customId = 'modal-recruit-' + i.user.id + '-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100);
                 modal = new ModalBuilder({
                     customId: customId,
-                    title: 'Permanent member application'
+                    title: 'Guild application'
                 });
 
                 modal.addLabelComponents(
                     new LabelBuilder()
-                        .setLabel('What\'s your reason to join PROF as a war member?')
+                        .setLabel('Why do you want to join our guild?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('why')
                             .setRequired(true)
                             .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('E.g. To defend the claim')
                             .setMaxLength(100)),
                     new LabelBuilder()
                         .setLabel('What war builds do you have access to?')
@@ -155,10 +76,10 @@ module.exports = {
                             .setCustomId('builds')
                             .setRequired(true)
                             .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('E.g. Divzer DPs, Abso Healer')
+                            .setPlaceholder('E.g. Divzer, Guardian')
                             .setMaxLength(100)),
                     new LabelBuilder()
-                        .setLabel('What is your GMT timezone?')
+                        .setLabel('What is your timezone?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('timezone')
                             .setRequired(true)
@@ -171,10 +92,9 @@ module.exports = {
                             .setCustomId('guilds')
                             .setRequired(false)
                             .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('E.g. PROF')
                             .setMaxLength(50)),
                     new LabelBuilder()
-                        .setLabel('What else would you like to add?')
+                        .setLabel('Anything else you\'d like to add?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('other')
                             .setRequired(false)
@@ -204,7 +124,7 @@ module.exports = {
                 let timezone = modalInteraction.fields.getTextInputValue('timezone');
                 let other = modalInteraction.fields.getTextInputValue('other');
 
-                applicationChannel = await DiscordHelper.fetch(i.guild?.channels, recruiterOutputChannel);
+                applicationChannel = await DiscordHelper.fetch(i.guild?.channels, recruitOutputChannel);
                 if (!applicationChannel) {
                     DiscordHelper.reply(modalInteraction, { content: 'There was an issue fetching the application channel. Please contact oxids.', ephemeral: true });
                     break;
@@ -216,7 +136,7 @@ module.exports = {
                     break;
                 }
 
-                messageText = '# There is a new permanent member application!';
+                messageText = '# There is a new application!';
                 messageText += '\nUsername: `' + (user.username ?? '') + '`';
                 messageText += '\nDiscord: ' + `<@${i.member.id}> (\`${i.user.username}\`)`;
 
@@ -232,7 +152,7 @@ module.exports = {
                     messageText += '\nOther: `' + (other ?? '') + '`';
                 }
 
-                const userInfo = await getRecruiterMessage();
+                const userInfo = await getApplicationMessage();
                 if (userInfo) {
                     messageText += '\n\n' + userInfo;
                 }
@@ -246,7 +166,7 @@ module.exports = {
                 DiscordHelper.editReply(i, { content: 'Unknown interaction. How did you get here?', ephemeral: true });
                 break;
 
-            async function getRecruiterMessage() {
+            async function getApplicationMessage() {
                 try {
 
                     // Adds the reacts for the vote
@@ -254,44 +174,8 @@ module.exports = {
                     message.react(message.guild.emojis.cache.find(emoji => emoji.name === 'no'));
                     message.react(message.guild.emojis.cache.find(emoji => emoji.name === 'neutral'));
 
-                    // Checks if the user had any previous punishments
+                    // Adds additional info for the user
                     try {
-                        const punishments = await PunishmentHelper.getPunishments(verifiedAccount.minecraftUUID, null, true);
-                        if (punishments?.length) {
-                            const embeds = PunishmentHelper.getUserPunishmentsEmbed(user.username, punishments);
-                            DiscordHelper.sendEmbedsToChannel(message.channel, embeds);
-                        }
-                    } catch (e) {
-                        if (e.publicMessage) {
-                            DiscordHelper.reply(message, e.publicMessage);
-                            return;
-                        }
-
-                        DiscordHelper.reply(message, 'Error fetching punishments. Please contact oxids.');
-                        return;
-                    }
-
-                    // Checks how long the user has been in the guild for
-                    try {
-
-                        // Loads the info of the guild
-                        const guild = await WynnApiHelper.getGuildInfo('Profession Heaven');
-                        if (!guild) {
-                            DiscordHelper.reply(message, 'Couldn\'t load guild!');
-                            return;
-                        }
-                        if (!guild.members?.all?.length) {
-                            DiscordHelper.reply(message, 'Guild has no members!');
-                            return;
-                        }
-
-
-                        // Looks for the player
-                        const player = _.find(guild.members.all, member => member.username.toLowerCase() === user.username.toLowerCase());
-                        if (!player) {
-                            DiscordHelper.reply(message, 'User `' + user.username + '` is not in the guild!');
-                            return;
-                        }
 
                         // Checks the profession levels of the player
                         let classes = await getClasses(user.uuid);
@@ -310,9 +194,7 @@ module.exports = {
                             return;
                         }
 
-                        const joinedSince = FormatHelper.getFormattedTimeSinceTwoDates(new Date(player?.joined));
-                        let reply = 'Joined the guild on <t:' + Math.floor(new Date(player?.joined).getTime() / 1000) + '> (' + joinedSince + ')'
-                            + '\n\n**Highest class:** Level ' + highestClass.totalLevel
+                        let reply = '\n\n**Highest class:** Level ' + highestClass.totalLevel
                             + '\nhttps://wynncraft.com/stats/player/' + user.uuid + '?class=' + _.first(classes).uuid + '\n';
 
                         _.forEach(SHOWN_PROFESSIONS, profession => {

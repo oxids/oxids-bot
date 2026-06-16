@@ -20,7 +20,7 @@ let intervals = []; // All intervals across all bot instances
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('world-events-tracker')
-		.setDescription('Tracks a mayor Wynncraft world event.')
+		.setDescription('Tracks a major Wynncraft world event.')
 		.addStringOption(option =>
 			option.setName('world-event')
 				.setDescription('The world event to track (Default: ' + WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION + ')')

@@ -94,7 +94,7 @@ function getChangelog() {
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
 				description: 'Add parameters to toggle off 1h and 30m pings.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
-				description: 'Renamed all "anni-" commands to "world-events-" in anticipation of future mayor world events.' },
+				description: 'Renamed all "anni-" commands to "world-events-" in anticipation of future major world events.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
 				description: 'Show for which party a leader was set.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
@@ -103,6 +103,8 @@ function getChangelog() {
 				description: 'Add a command for the bot to give out or remove roles from users.' },
 			{ type: TYPE_ENUM.EDIT, command: '/help',
 				description: 'Add dev server to help page.' },
+			{ type: TYPE_ENUM.EDIT, command: '/guild-application',
+				description: 'Add a default mode for applications, so guilds can test the basic functions.' },
 		]},
 
 		{ date: '2026-05-30', version: '1.0.3.4', content: [

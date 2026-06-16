@@ -403,7 +403,19 @@ module.exports = {
 
             return null;
         }
-    }
+    },
+    async getWorldEvents() {
+        try {
+            const worldEventsJSON = await callWynnApi('/map/world-events');
+            return await worldEventsJSON?.body?.json();
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getWorldEvents(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getWorldEvents(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
+    },
 }
 
 

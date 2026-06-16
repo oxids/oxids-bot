@@ -5,7 +5,7 @@ const DiscordHelper = require('../helpers/discord.helper.js');
 
 module.exports = {
     getPunishmentsFileName(guildId) {
-        return `./assets/anni-punishments/${guildId}.json`
+        return `./assets/world-events-punishments/${guildId}.json`
     },
 
     async getPunishments(guildId, userId, type, onlyActive) {

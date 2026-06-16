@@ -12,7 +12,7 @@ module.exports = {
 
 		if (showHelpPage) {
 			commands = [
-				'DM **oxids** on Discord for support or feature requests!'
+				'Join the Dev server (https://discord.gg/GXx8XJMYkK) or message **oxids** on Discord for support or feature requests!'
 			];
 
 			embeds = _.concat(embeds, DiscordHelper.getEmbeds([{ name: '', value: commands.sort().join('\n\n') }],
@@ -20,7 +20,7 @@ module.exports = {
 		}
 
 		commands = [
-			'**/anni-tracker**\nAutomated notification and party system for the Annihilation world event.',
+			'**/world-events-tracker**\nAutomated notification and party system for the Annihilation world event.',
 			'**/guild-applications**\nAutomated guild application system which lets users apply for Wynncraft guilds using custom Discord modals.',
 			'**/guild-member-tracker**\nAutomated member tracker for Wynncraft guilds which tracks joins, promotions and leaves.',
 			'**/guild-verification**\nAutomated verification system, which automates giving guild roles to verified users based on their Wynncraft guild ranks.',

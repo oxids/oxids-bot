@@ -148,7 +148,7 @@ module.exports = {
         return await channel.send(content).then(newMessage => newMessage).catch(error => {
             console.error('DiscordHelper.send(): ', error);
 
-            // Disabled bc it spams logs with Anni command
+            // Disabled bc it spams logs with world events command
             // LogHelper.writeToLog('DiscordHelper.send(): ' + JSON.stringify(error, Object.getOwnPropertyNames(error)));
             return null;
         });

@@ -2,25 +2,31 @@ const { SlashCommandBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, Co
 	StringSelectMenuBuilder,
 	LabelBuilder,
 	StringSelectMenuOptionBuilder,} = require('discord.js');
-const AnniApiHelper = require('../../helpers/anni-api.helper.js');
+const WorldEventsHelper = require('../../helpers/world-events.helper.js');
 const DiscordHelper = require('../../helpers/discord.helper.js');
 const FileHelper = require('../../helpers/file.helper.js');
 const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
-const AnniPunishmentHelper = require('../../helpers/anni-punishment.helper.js');
+const WorldEventsPunishmentHelper = require('../../helpers/world-events-punishment.helper.js');
 const VerificationHelper = require('../../helpers/verification.helper.js');
 const WynnApiHelper = require('../../helpers/wynn-api.helper.js');
 
 
 
-const ANNI_TRACKERS_FILENAME = './assets/anni-trackers.json';
+const WORLD_EVENT_TRACKERS_FILENAME = './assets/world-events-trackers.json';
 
 let intervals = []; // All intervals across all bot instances
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('anni-tracker')
-		.setDescription('Tracks annihilation world event.')
+		.setName('world-events-tracker')
+		.setDescription('Tracks a mayor Wynncraft world event.')
+		.addStringOption(option =>
+			option.setName('world-event')
+				.setDescription('The world event to track (Default: ' + WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION + ')')
+				.addChoices(...(_.map(Object.keys(WorldEventsHelper.WORLD_EVENTS_ENUM), key => {
+					return { name: WorldEventsHelper.WORLD_EVENTS_ENUM[key], value: WorldEventsHelper.WORLD_EVENTS_ENUM[key] };
+				}))))
 		.addRoleOption(option =>
 			option.setName('ping-role')
 				.setDescription('The role to be pinged (Default: None)'))
@@ -38,22 +44,22 @@ module.exports = {
 				.setDescription('Disable ping at the 30m mark (Default: No)'))
 		.addBooleanOption(option =>
 			option.setName('disable')
-				.setDescription('Set to true if you want the bot to stop tracking annihilation world events'))
+				.setDescription('Set to true if you want the bot to stop tracking world events'))
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.setDMPermission(false),
 	async onStartup(client) {
-		let activeTrackers = FileHelper.readFromFile(ANNI_TRACKERS_FILENAME);
+		let activeTrackers = FileHelper.readFromFile(WORLD_EVENT_TRACKERS_FILENAME);
 		if (!activeTrackers) {
 			return;
 		}
 
 		// Removes Duplicates
 		activeTrackers = _.uniqWith(activeTrackers, (a, b) => {
-			return a.guildId === b.guildId && a.channelId === b.channelId;
+			return a.guildId === b.guildId && a.channelId === b.channelId && a.worldEvent === b.worldEvent;
 		});
 
-		console.log('Starting ' + activeTrackers.length + ' anni trackers from memory!');
-		LogHelper.writeToLog('Starting ' + activeTrackers.length + ' anni trackers from memory!\n' + JSON.stringify(activeTrackers));
+		console.log('Starting ' + activeTrackers.length + ' world event trackers from memory!');
+		LogHelper.writeToLog('Starting ' + activeTrackers.length + ' world event trackers from memory!\n' + JSON.stringify(activeTrackers));
 
 		for (let tracker of _.cloneDeep(activeTrackers)) {
 			try {
@@ -61,27 +67,27 @@ module.exports = {
 				// Tell the command that its an execution from memory and sets used functions
 				const guild = await DiscordHelper.fetch(client?.guilds, tracker.guildId);
 				if (!guild) {
-					console.log('Anni Tracker for guild ' + tracker.guildId + ' could not be started!');
-					LogHelper.writeToLog('Anni Tracker for guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
+					console.log('World Event Tracker for guild ' + tracker.guildId + ' could not be started!');
+					LogHelper.writeToLog('World Event Tracker for guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
 					activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId);
-					FileHelper.writeToFile(ANNI_TRACKERS_FILENAME, activeTrackers);
+					FileHelper.writeToFile(WORLD_EVENT_TRACKERS_FILENAME, activeTrackers);
 					continue;
 				}
 
 				const channel = await DiscordHelper.fetch(guild?.channels, tracker.options.channel);
 				if (!channel) {
-					console.log('Anni Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!');
-					LogHelper.writeToLog('Anni Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
+					console.log('World Event Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!');
+					LogHelper.writeToLog('World Event Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
 					activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId && a.options.channel === tracker.options.channel);
-					FileHelper.writeToFile(ANNI_TRACKERS_FILENAME, activeTrackers);
+					FileHelper.writeToFile(WORLD_EVENT_TRACKERS_FILENAME, activeTrackers);
 					continue;
 				}
 
 				// Should not stop the existing tracker on a message fetching error
 				const message = await DiscordHelper.fetch(channel?.messages, tracker.message);
 				if (!message) {
-					console.log('Anni Tracker for message ' + tracker.message + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find message!');
-					LogHelper.writeToLog('Anni Tracker for message ' + tracker.message + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find message\n' + JSON.stringify(tracker));
+					console.log('World Event Tracker for message ' + tracker.message + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find message!');
+					LogHelper.writeToLog('World Event Tracker for message ' + tracker.message + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find message\n' + JSON.stringify(tracker));
 				}
 
 				// Should not stop the existing tracker on a thread fetching error
@@ -93,8 +99,8 @@ module.exports = {
 				}
 
 				if (tracker.thread && !thread) {
-					console.log('Anni Tracker for thread ' + tracker.thread + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find the thread!');
-					LogHelper.writeToLog('Anni Tracker for thread ' + tracker.thread + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find the thread!');
+					console.log('World Event Tracker for thread ' + tracker.thread + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find the thread!');
+					LogHelper.writeToLog('World Event Tracker for thread ' + tracker.thread + ' in channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not find the thread!');
 				}
 
 				tracker.fromMemory = true;
@@ -108,37 +114,38 @@ module.exports = {
 
 				await this.execute(tracker);
 
-				LogHelper.writeToLog('Started an anni tracker for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
+				LogHelper.writeToLog('Started an World Event tracker for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
 			} catch (e) {
 				console.log(e);
-				console.log('Anni Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
-				LogHelper.writeToLog('Anni Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(e, Object.getOwnPropertyNames(e)) + '\n' + JSON.stringify(tracker));
-				activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId && a.options.channel === tracker.options.channel);
-				FileHelper.writeToFile(ANNI_TRACKERS_FILENAME, activeTrackers);
+				console.log('World Event Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+				LogHelper.writeToLog('World Event Tracker for channel ' + tracker.options.channel + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(e, Object.getOwnPropertyNames(e)) + '\n' + JSON.stringify(tracker));
+				activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId && a.options.channel === tracker.options.channel && a.worldEvent === tracker.options.worldEvent);
+				FileHelper.writeToFile(WORLD_EVENT_TRACKERS_FILENAME, activeTrackers);
 			}
 		}
 
 		// Removes the trackers which couldnt be started
-		console.log('Actually started ' + activeTrackers.length + ' anni trackers from memory!');
-		LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' anni trackers from memory!');
+		console.log('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
+		LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
 	},
 	async execute(interaction) {
 		let collector, interval;
 
 		// Checks if the command was executed from memory
 		let messagesToDelete = [];
-		let channel, message, thread, disable, pingRole, participants, anniData, trackerId, resendOnUpdate, disable1hPing, disable30mPing;
+		let channel, message, thread, disable, pingRole, participants, worldEventData, trackerId, resendOnUpdate, disable1hPing, disable30mPing, worldEvent;
 		if (interaction.fromMemory) {
 			channel = interaction.options.channel;
 			pingRole = interaction.options.pingRole;
 			participants = interaction.participants;
 			message = interaction.message;
 			thread = interaction.thread;
-			anniData = interaction.anniData;
+			worldEventData = interaction.worldEventData || interaction.anniData;
 			trackerId = interaction.trackerId;
 			resendOnUpdate = interaction.options.resendOnUpdate;
 			disable1hPing = interaction.options.disable1hPing;
 			disable30mPing = interaction.options.disable30mPing;
+			worldEvent = interaction.options.worldEvent || WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION;
 
 			if (!message) {
 				message = await DiscordHelper.send(channel, 'Old message not found, so sending new one...');
@@ -155,31 +162,32 @@ module.exports = {
 			participants = [];
 			message = null;
 			thread = null;
-			anniData = null;
+			worldEventData = null;
 			trackerId = new Date().getTime() + Math.floor(Math.random() * 100);
 			resendOnUpdate = interaction.options.getBoolean('resend-on-update');
 			disable1hPing = interaction.options.getBoolean('disable-1h-ping');
 			disable30mPing = interaction.options.getBoolean('disable-30m-ping');
+			worldEvent = interaction.options.getString('worldEvent') || WorldEventsHelper.WORLD_EVENTS_ENUM.PRELUDE_TO_ANNIHILATION;
 		}
 
 		await DiscordHelper.deferReply(interaction);
 
 		// Checks if the guild that started the tracker already has a tracker running
-		const existingInterval = _.find(intervals, i => i.guildId === interaction.guild.id && i.channel === channel.id);
+		const existingInterval = _.find(intervals, i => i.guildId === interaction.guild.id && i.channel === channel.id && i.worldEvent === worldEvent);
 		if (existingInterval) {
 			removeActiveTracker(true);
-			DiscordHelper.followUp(interaction, 'Stopped the existing anni tracker.');
+			DiscordHelper.followUp(interaction, 'Stopped the existing world event tracker.');
 
 			if (disable) {
 				return;
 			}
 		} else if (disable) {
-			DiscordHelper.followUp(interaction, 'There are no active anni trackers for this channel.');
+			DiscordHelper.followUp(interaction, 'There are no active ' + worldEvent + ' trackers for this channel.');
 			return;
 		}
 
 		if (!message) {
-			message = await DiscordHelper.editReply(interaction, { content: 'Starting anni tracker. If nothing else happens, the bot is missing permissions to either see this channel or write in it!' });
+			message = await DiscordHelper.editReply(interaction, { content: 'Starting ' + worldEvent + ' tracker. If nothing else happens, the bot is missing permissions to either see this channel or write in it!' });
 			if (!message) {
 				return;
 			}
@@ -198,11 +206,12 @@ module.exports = {
 				message: message.id,
 				interval: interval,
 				participants: participants ?? [],
-				anniData: anniData,
+				worldEventData: worldEventData,
 				trackerId: trackerId,
 				resendOnUpdate: resendOnUpdate,
 				disable1hPing: disable1hPing,
 				disable30mPing: disable30mPing,
+				worldEvent: worldEvent
 			});
 
 			updateTrackersFile();
@@ -211,7 +220,7 @@ module.exports = {
 
 		// This function exists to locally update the trackers for a restart, without it restarting the entire thing each time someone enters/leaves the party
 		function updateTrackersFile(removeCurrent = false) {
-			let activeTrackers = FileHelper.readFromFile(ANNI_TRACKERS_FILENAME);
+			let activeTrackers = FileHelper.readFromFile(WORLD_EVENT_TRACKERS_FILENAME);
 			if (!activeTrackers) {
 				activeTrackers = [];
 			}
@@ -227,16 +236,17 @@ module.exports = {
 						resendOnUpdate: resendOnUpdate,
 						disable1hPing: disable1hPing,
 						disable30mPing: disable30mPing,
+						worldEvent: worldEvent
 					},
 					message: message.id,
 					thread: thread?.id,
-					anniData: anniData,
+					worldEventData: worldEventData,
 					trackerId: trackerId,
 					participants: participants,
 				});
 			}
 
-			FileHelper.writeToFile(ANNI_TRACKERS_FILENAME, activeTrackers);
+			FileHelper.writeToFile(WORLD_EVENT_TRACKERS_FILENAME, activeTrackers);
 		}
 
 		function removeActiveTracker(initialCheck = false) {
@@ -256,8 +266,8 @@ module.exports = {
 				try {
 					collector.stop();
 				} catch (e) {
-					console.log('anni-tracker: removeActiveTracker(): collector.stop():', e);
-					LogHelper.writeToLog('anni-tracker: removeActiveTracker(): collector.stop():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+					console.log('world-events-tracker: removeActiveTracker(): collector.stop():', e);
+					LogHelper.writeToLog('world-events-tracker: removeActiveTracker(): collector.stop():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 				}
 			}
 
@@ -269,8 +279,8 @@ module.exports = {
 				try {
 					collector.stop();
 				} catch (e) {
-					console.log('anni-tracker: collector.stop():', e);
-					LogHelper.writeToLog('anni-tracker: collector.stop():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+					console.log('world-events-tracker: collector.stop():', e);
+					LogHelper.writeToLog('world-events-tracker: collector.stop():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 				}
 			}
 
@@ -291,15 +301,15 @@ module.exports = {
 					switch (_.last(i.customId.split(':'))) {
 						case 'enter':
 
-                            const punishments = await AnniPunishmentHelper.getPunishments(interaction.guild.id, i.user.id, null, true);
+                            const punishments = await WorldEventsPunishmentHelper.getPunishments(interaction.guild.id, i.user.id, null, true);
                             if (_.find(punishments, p => p.type === 'ban')) {
-                                DiscordHelper.reply(i, { content: 'You are banned from the current Annihilation party!\nIf you believe this to be an error, please contact any Chief privately.', ephemeral: true });
+                                DiscordHelper.reply(i, { content: 'You are banned from the current ' + worldEvent + ' party!\nIf you believe this to be an error, please contact any Chief privately.', ephemeral: true });
                                 break;
                             }
 
                             if (punishments?.length) {
                                 const hoursBeforeJoinable = punishments.length === 1 ? 4 : 1;
-                                if ((new Date(anniData.datetime_utc) - new Date()) >= 1000 * 60 * 60 * hoursBeforeJoinable) {
+                                if ((new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * 60 * hoursBeforeJoinable) {
                                     DiscordHelper.reply(i, { content: 'Due to your recent untimeliness, you can only join ' + hoursBeforeJoinable + 'h before the event!\nIf you believe this to be an error, please contact any Chief privately.', ephemeral: true });
                                     break;
                                 }
@@ -317,7 +327,7 @@ module.exports = {
 							customId = 'modal-enter-' + i.user.id + '-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100);
 							modal = new ModalBuilder({
 								customId: customId,
-								title: 'Enter Annihilation party'
+								title: 'Enter party'
 							});
 
 							modal.addLabelComponents(
@@ -465,7 +475,7 @@ module.exports = {
 							customId = 'modal-modify-' + i.user.id + '-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100);
 							modal = new ModalBuilder({
 								customId: customId,
-								title: 'Modify Annihilation party entry'
+								title: 'Modify party entry'
 							});
 
 							usernameSelect = canUseUsernameSelect(existingParticipants);
@@ -625,7 +635,7 @@ module.exports = {
 							customId = 'modal-remove-' + i.user.id + '-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100);
 							modal = new ModalBuilder({
 								customId: customId,
-								title: 'Leave Annihilation party'
+								title: 'Leave party'
 							});
 
 							usernameSelect = canUseUsernameSelect(existingParticipants);
@@ -766,7 +776,8 @@ module.exports = {
 
 							let previousLeader = null;
 							const index = participants.indexOf(participant);
-							for (let i = Math.floor(index / 10) * 10; i < (Math.floor(index / 10) * 10) + 10 && i < participants.length; i++) {
+							party = Math.floor(index / 10) + 1;
+							for (let i = (party - 1) * 10; i < party * 10 && i < participants.length; i++) {
 								const p = participants[i];
 								if (!p?.partyLeader) {
 									continue;
@@ -785,7 +796,8 @@ module.exports = {
 								modalInteraction.deferUpdate();
 							} else {
 								messagesToDelete.push(await DiscordHelper.reply(modalInteraction, {
-									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username) + ' as a party leader!'
+									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username)
+										+ ' as a party leader for party ' + party + '!'
 								}));
 							}
 
@@ -826,8 +838,8 @@ module.exports = {
 							DiscordHelper.editReply(i, { content: 'Unknown interaction. How did you get here?', ephemeral: true });
 					}
 				} catch (e) {
-					console.log('anni-tracker: collector.collect():', e);
-					LogHelper.writeToLog('anni-tracker: collector.collect():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+					console.log('world-events-tracker: collector.collect():', e);
+					LogHelper.writeToLog('world-events-tracker: collector.collect():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 
 					if (!await DiscordHelper.editReply(i, { content: 'There was an error processing. Please contact oxids.', ephemeral: true })) {
 						DiscordHelper.reply(i, { content: 'There was an error processing. Please contact oxids.', ephemeral: true });
@@ -839,8 +851,8 @@ module.exports = {
 				try {
 					collector.stop();
 				} catch (e) {
-					console.log('anni-tracker: collector.end():', e);
-					LogHelper.writeToLog('anni-tracker: collector.end():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+					console.log('world-events-tracker: collector.end():', e);
+					LogHelper.writeToLog('world-events-tracker: collector.end():' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 				}
 			});
 		}
@@ -889,64 +901,67 @@ module.exports = {
 			});
 		}
 
+		let initialPinged = false;
 		let oneHourPinged = false;
 		let thirtyMinutePinged = false;
-		async function processAnniData(newAnniData) {
-			if (!newAnniData) {
+		async function processWorldEventData(newWorldEventData) {
+			if (!newWorldEventData) {
 				return;
 			}
 
-			// It is possible the Anni data had to be manually set, because the API did not yet update. Ignore new data in this case
-			if (anniData && newAnniData.predicted && !anniData.predicted && (new Date(anniData.datetime_utc).getTime() >= new Date().getTime()
-				|| (new Date(newAnniData.datetime_utc).getTime() < new Date().getTime()))) {
+			// It is possible the world event data had to be manually set, because the API did not yet update. Ignore new data in this case
+			if (worldEventData && newWorldEventData.predicted && !worldEventData.predicted && (new Date(worldEventData.datetime_utc).getTime() >= new Date().getTime()
+				|| (new Date(newWorldEventData.datetime_utc).getTime() < new Date().getTime()))) {
 
-				newAnniData = anniData;
+				newWorldEventData = worldEventData;
 			}
 
-			// Pings for Anni
-			if (!newAnniData.predicted && pingRole) {
-				const ANNI_MESSAGE = 'Anni starts <t:' + Math.floor(new Date(newAnniData.datetime_utc).getTime() / 1000) + ':R> ' + `<@&${ pingRole }>!`;
+			// Pings for the world event
+			if (!newWorldEventData.predicted && pingRole) {
+				const WORLD_EVENT_MESSAGE = worldEvent + ' starts <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + ':R> ' + `<@&${ pingRole }>!`;
 
 				// Ping 30m in advance
-				if (!thirtyMinutePinged && !disable30mPing && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
+				if (!disable30mPing && !thirtyMinutePinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
 					thirtyMinutePinged = true;
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
+					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
 				}
 
 				// Ping 1h in advance
-				else if (!thirtyMinutePinged && !disable1hPing && !oneHourPinged && (new Date(newAnniData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
+				else if (!disable1hPing && !thirtyMinutePinged && !oneHourPinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
+					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
 				}
 
 				// Ping if it just swapped from prediction to confirmed
-				else if (!thirtyMinutePinged && !oneHourPinged && (!anniData || anniData.predicted)) {
-					messagesToDelete.push(await DiscordHelper.send(channel, ANNI_MESSAGE));
+				else if (!initialPinged && !thirtyMinutePinged && !oneHourPinged && (!worldEventData || worldEventData.predicted)) {
+					initialPinged = true;
+					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
 				}
 			}
 
 			// If no data changed, nothing needs to be updated
-			if (newAnniData.predicted === anniData?.predicted && newAnniData.datetime_utc === anniData?.datetime_utc) {
+			if (newWorldEventData.predicted === worldEventData?.predicted && newWorldEventData.datetime_utc === worldEventData?.datetime_utc) {
 				return;
 			}
 
 			// Adds the tracker if it is the initial start or archives the existing tracker, if it is a new event
-			if (!anniData || (!anniData.predicted && (newAnniData.predicted || (Math.abs(new Date(newAnniData.datetime_utc) - new Date(anniData.datetime_utc)) > (1000 * 60 * 60 * 24 * 2))))) {
+			if (!worldEventData || (!worldEventData.predicted && (newWorldEventData.predicted || (Math.abs(new Date(newWorldEventData.datetime_utc) - new Date(worldEventData.datetime_utc)) > (1000 * 60 * 60 * 24 * 2))))) {
 
-				// Archives the previous annihilation message
-				if (anniData) {
+				// Archives the previous world event message
+				if (worldEventData) {
 					await updateMessage(true);
 					await archiveThread();
 					removeActiveTracker();
 					reducePunishments();
 				}
 
-				anniData = newAnniData;
+				worldEventData = newWorldEventData;
 				participants = [];
 				message = await DiscordHelper.send(channel, 'New data detected...');
 				thread = null;
 				trackerId = new Date().getTime() + Math.floor(Math.random() * 100);
+				initialPinged = false;
 				oneHourPinged = false;
 				thirtyMinutePinged = false;
 
@@ -962,7 +977,7 @@ module.exports = {
 				addActiveTracker();
 				createThread();
 			} else {
-				anniData = newAnniData;
+				worldEventData = newWorldEventData;
 			}
 
 			updateTrackersFile();
@@ -974,7 +989,7 @@ module.exports = {
 			// If the thread is created immediately, discord does not recognize the parent message correctly
 			setTimeout(async () => {
 				thread = await DiscordHelper.startThread(message, {
-					name: 'Active Annihilation event',
+					name: 'Active ' + worldEvent + ' event',
 					autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays
 				});
 
@@ -987,7 +1002,7 @@ module.exports = {
 
 		function reducePunishments() {
 
-			let punishments = FileHelper.readFromFile(AnniPunishmentHelper.getPunishmentsFileName(interaction.guild.id));
+			let punishments = FileHelper.readFromFile(WorldEventsPunishmentHelper.getPunishmentsFileName(interaction.guild.id));
 			if (!punishments) {
 				punishments = [];
 			}
@@ -1007,7 +1022,7 @@ module.exports = {
 				punishment.amountServed++;
 			}
 
-			FileHelper.writeToFile(AnniPunishmentHelper.getPunishmentsFileName(interaction.guild.id), punishments);
+			FileHelper.writeToFile(WorldEventsPunishmentHelper.getPunishmentsFileName(interaction.guild.id), punishments);
 		}
 
 		async function archiveThread() {
@@ -1016,9 +1031,9 @@ module.exports = {
 					return;
 				}
 
-				const closedThread = await thread.setName(new Date(anniData.datetime_utc).toLocaleDateString('de-DE') + ' Annihilation event');
+				const closedThread = await thread.setName(new Date(worldEventData.datetime_utc).toLocaleDateString('de-DE') + ' ' + worldEvent + ' event');
 
-				// Timeout so people can write some last messages after Anni
+				// Timeout so people can write some last messages after the world event ends
 				setTimeout(async () => {
 					await closedThread.setLocked(true);
 					await closedThread.setArchived(true);
@@ -1092,7 +1107,7 @@ module.exports = {
 			}
 			participants.splice(_.findLastIndex(participants, participant => participant.id) + 1);
 
-			if (anniData.predicted) {
+			if (worldEventData.predicted) {
 				DiscordHelper.edit(message, getPredictionMessage());
 			} else {
 				DiscordHelper.edit(message, await getActiveMessage(removeButtons));
@@ -1116,12 +1131,11 @@ module.exports = {
 
 			const embeds = DiscordHelper.getEmbeds([{
 				name: '',
-				value: 'There is currently no active annihilation event.'
-					+ '\nPrediction for next event: <t:' + Math.floor(new Date(anniData.datetime_utc).getTime() / 1000) + '>'
-					+ ' <t:' + Math.floor(new Date(anniData.datetime_utc).getTime() / 1000) + ':R>'
+				value: 'There is currently no active ' + worldEvent + ' event.'
+					+ '\nPrediction for next event: <t:' + Math.floor(new Date(worldEventData.datetime_utc).getTime() / 1000) + '>'
+					+ ' <t:' + Math.floor(new Date(worldEventData.datetime_utc).getTime() / 1000) + ':R>'
 					+ '\n\n**__Please note that the timestamp is only a prediction and might be off by multiple hours!__**'
-					+ '\n\nData by https://www.wynnpool.com/annihilation'
-			}], 1, 'Waiting for next Annihilation event', getEmbedImage(), 'Blue');
+			}], 1, 'Waiting for next ' + worldEvent + ' event', getEmbedImage(), 'Blue');
 
 			return {
 				embeds: embeds,
@@ -1229,13 +1243,12 @@ module.exports = {
 					DiscordHelper.getEmbeds([
 						{
 							name: '',
-							value: 'Annihilation ' + (removeButtons ? 'was' : 'will be')
-								+ ' on <t:' + Math.floor(new Date(anniData.datetime_utc).getTime() / 1000) + '>'
-								+ ' <t:' + Math.floor(new Date(anniData.datetime_utc).getTime() / 1000) + ':R>'
-								+ '\nData by https://www.wynnpool.com/annihilation'
+							value: worldEvent + ' ' + (removeButtons ? 'was' : 'will be')
+								+ ' on <t:' + Math.floor(new Date(worldEventData.datetime_utc).getTime() / 1000) + '>'
+								+ ' <t:' + Math.floor(new Date(worldEventData.datetime_utc).getTime() / 1000) + ':R>'
 								+ (thread?.id ? '\n<#' + thread?.id + '>' : '')
 						}
-					], 1, removeButtons ? 'Past Annihilation event' : 'Active Annihilation event', getEmbedImage(), removeButtons ? 'Grey' : 'Red')[0],
+					], 1, (removeButtons ? 'Past' : 'Active') + ' ' + worldEvent + ' event', getEmbedImage(), removeButtons ? 'Grey' : 'Red')[0],
 				],
 				partyEmbeds
 			);
@@ -1267,10 +1280,10 @@ module.exports = {
 		// This interval is started once and used across multiple events.
 		interval = setInterval(async () => {
 			try {
-				processAnniData(await AnniApiHelper.getAnniInfo());
+				processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
 			} catch (e) {
-				console.log('anni-tracker: interval: ', e);
-				LogHelper.writeToLog('anni-tracker: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+				console.log('world-events-tracker: interval: ', e);
+				LogHelper.writeToLog('world-events-tracker: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 			}
 		}, 1000 * 15 * 1);
 
@@ -1279,10 +1292,10 @@ module.exports = {
 		}
 
 		try {
-			processAnniData(await AnniApiHelper.getAnniInfo());
+			processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
 		} catch (e) {
-			console.log('anni-tracker: initial start:', e);
-			LogHelper.writeToLog('anni-tracker: initial start:' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+			console.log('world-events-tracker: initial start:', e);
+			LogHelper.writeToLog('world-events-tracker: initial start:' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 		}
 	},
 };

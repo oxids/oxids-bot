@@ -6,10 +6,22 @@ const WynnApiHelper = require("../helpers/wynn-api.helper");
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('changelog')
-		.setDescription('Shows the changelog for the bot.'),
+		.setDescription('Shows the changelog for the bot.')
+		.addBooleanOption(option =>
+			option.setName('only-1st-page')
+				.setDescription('Set to true if you only want the first page'))
+	,
 	async execute(interaction) {
+		const only1stPage = interaction.options.getBoolean('only-1st-page');
+
 		let embeds = [];
-		for (const changelogItem of getChangelog()) {
+
+		let changelog = getChangelog();
+		if (only1stPage) {
+			changelog = _.slice(changelog, 0, 1);
+		}
+
+		for (const changelogItem of changelog) {
 			let content = '';
 			for (const type of Object.keys(TYPE_ENUM)) {
 				let bulletPoints = _.filter(changelogItem.content, c => c.type === TYPE_ENUM[type]);

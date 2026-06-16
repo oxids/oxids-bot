@@ -55,7 +55,7 @@ module.exports = {
                     predictionDate.setHours(predictionDate.getHours() + 16);
                 }
 
-                worldEvent = { predicted: true, datetime_utc: predictionDate };
+                worldEvent = { predicted: true, datetime_utc: predictionDate.toISOString() };
             }
 
             return worldEvent;

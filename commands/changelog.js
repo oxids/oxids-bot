@@ -72,7 +72,7 @@ function getHeader(type) {
 
 function getChangelog() {
 	return [
-		{ date: '2026-06-20', version: '1.0.3.5', content: [
+		{ date: '2026-06-16', version: '1.0.3.5', content: [
 			{ type: TYPE_ENUM.EDIT, command: '/giveaway',
 				description: 'The initiator of a giveaway and the winners will now be pinged after the winners were drawn.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
@@ -83,6 +83,10 @@ function getChangelog() {
 				description: 'Add parameters to toggle off 1h and 30m pings.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
 				description: 'Renamed all "anni-" commands to "world-events-" in anticipation of future mayor world events.' },
+			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
+				description: 'Show for which party a leader was set.' },
+			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
+				description: 'Fix spam of pings during the initial Anni reveal if the Discord API is slow.' },
 		]},
 
 		{ date: '2026-05-30', version: '1.0.3.4', content: [

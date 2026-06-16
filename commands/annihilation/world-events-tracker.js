@@ -173,7 +173,7 @@ module.exports = {
 		await DiscordHelper.deferReply(interaction);
 
 		// Checks if the guild that started the tracker already has a tracker running
-		const existingInterval = _.find(intervals, i => i.guildId === interaction.guild.id && i.channel === channel.id && i.options.worldEvent === worldEvent);
+		const existingInterval = _.find(intervals, i => i.guildId === interaction.guild.id && i.channel === channel.id && i.worldEvent === worldEvent);
 		if (existingInterval) {
 			removeActiveTracker(true);
 			DiscordHelper.followUp(interaction, 'Stopped the existing world event tracker.');

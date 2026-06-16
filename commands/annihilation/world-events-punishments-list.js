@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 var _ = require('lodash');
-const AnniPunishmentHelper = require('../../helpers/anni-punishment.helper.js');
+const WorldEventsPunishmentHelper = require('../../helpers/world-events-punishment.helper.js');
 const DiscordHelper = require('../../helpers/discord.helper.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('anni-punishments-list')
-		.setDescription('Displays the Annihilation punishments of the current server.')
+		.setName('world-events-punishments-list')
+		.setDescription('Displays the world events punishments of the current server.')
 		.addUserOption(option =>
 			option.setName('user')
 				.setDescription('The user who was punished (Default: All)'))
@@ -33,7 +33,7 @@ module.exports = {
 		// Loads the punishments
 		let punishments;
 		try {
-			punishments = await AnniPunishmentHelper.getPunishments(interaction.guildId, user?.id, type, onlyActive);
+			punishments = await WorldEventsPunishmentHelper.getPunishments(interaction.guildId, user?.id, type, onlyActive);
 		} catch (e) {
 			throw e;
 		}
@@ -48,7 +48,7 @@ module.exports = {
 			return;
 		}
 
-		const embeds = user ? AnniPunishmentHelper.getUserPunishmentsEmbed(user?.id, punishments) : await getListEmbeds(interaction, punishments, type);
+		const embeds = user ? WorldEventsPunishmentHelper.getUserPunishmentsEmbed(user?.id, punishments) : await getListEmbeds(interaction, punishments, type);
 		DiscordHelper.sendEmbedsToInteraction(interaction, embeds);
 	},
 };
@@ -57,7 +57,7 @@ async function getListEmbeds(interaction, punishments, type) {
 
 	// Outputs the result
 	const fields = _.map(punishments, (punishment, index) => {
-		const punishmentInfo = AnniPunishmentHelper.getTitleAndColor(punishment);
+		const punishmentInfo = WorldEventsPunishmentHelper.getTitleAndColor(punishment);
 
 		return {
 			name: punishmentInfo.title,

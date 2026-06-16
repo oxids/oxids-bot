@@ -32,8 +32,8 @@ module.exports = {
 			return a.guildId === b.guildId && a.channelId === b.channelId;
 		});
 
-		console.log('Starting ' + activeTrackers.length + ' anni trackers from memory!');
-		LogHelper.writeToLog('Starting ' + activeTrackers.length + ' anni trackers from memory!\n' + JSON.stringify(activeTrackers));
+		console.log('Starting ' + activeTrackers.length + ' Announcement notification trackers from memory!');
+		LogHelper.writeToLog('Starting ' + activeTrackers.length + ' Announcement notification trackers from memory!\n' + JSON.stringify(activeTrackers));
 
 		for (let tracker of _.cloneDeep(activeTrackers)) {
 			try {

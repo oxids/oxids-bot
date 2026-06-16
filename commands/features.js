@@ -20,7 +20,7 @@ module.exports = {
 		}
 
 		commands = [
-			'**/anni-tracker**\nAutomated notification and party system for the Annihilation world event.',
+			'**/world-events-tracker**\nAutomated notification and party system for the Annihilation world event.',
 			'**/guild-applications**\nAutomated guild application system which lets users apply for Wynncraft guilds using custom Discord modals.',
 			'**/guild-member-tracker**\nAutomated member tracker for Wynncraft guilds which tracks joins, promotions and leaves.',
 			'**/guild-verification**\nAutomated verification system, which automates giving guild roles to verified users based on their Wynncraft guild ranks.',

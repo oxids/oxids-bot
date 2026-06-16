@@ -81,6 +81,8 @@ function getChangelog() {
 				description: 'Pings and party leader messages are now deleted after the event is over.' },
 			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
 				description: 'Add parameters to toggle off 1h and 30m pings.' },
+			{ type: TYPE_ENUM.EDIT, command: '/anni-tracker',
+				description: 'Renamed all "anni-" commands to "world-events-" in anticipation of future mayor world events.' },
 		]},
 
 		{ date: '2026-05-30', version: '1.0.3.4', content: [

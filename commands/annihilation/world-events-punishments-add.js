@@ -2,11 +2,11 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 var _ = require('lodash');
 const FileHelper = require('../../helpers/file.helper.js');
 const DiscordHelper = require("../../helpers/discord.helper");
-const AnniPunishmentHelper = require('../../helpers/anni-punishment.helper.js');
+const WorldEventsPunishmentHelper = require('../../helpers/world-events-punishment.helper.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('anni-punishments-add')
+		.setName('world-events-punishments-add')
 		.setDescription('Adds a user to the punishment list.')
 		.addUserOption(option =>
 			option.setName('user')
@@ -24,7 +24,7 @@ module.exports = {
 				.setDescription('The reason for of punishment (Default: None)'))
 		.addNumberOption(option =>
 			option.setName('amount')
-				.setDescription('How many Annihilation events this punishment is valid for (Default: 2)'))
+				.setDescription('How many world events this punishment is valid for (Default: 2)'))
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.setDMPermission(false),
 	async execute(interaction) {
@@ -38,7 +38,7 @@ module.exports = {
 		await DiscordHelper.deferReply(interaction);
 
 		// Loads the punishments
-		let punishments = FileHelper.readFromFile(AnniPunishmentHelper.getPunishmentsFileName(interaction.guildId));
+		let punishments = FileHelper.readFromFile(WorldEventsPunishmentHelper.getPunishmentsFileName(interaction.guildId));
 		if (!punishments) {
 			punishments = [];
 		}
@@ -67,7 +67,7 @@ module.exports = {
 			punishment.amountServed = 0;
 		}
 
-		FileHelper.writeToFile(AnniPunishmentHelper.getPunishmentsFileName(interaction.guildId), punishments);
+		FileHelper.writeToFile(WorldEventsPunishmentHelper.getPunishmentsFileName(interaction.guildId), punishments);
 		DiscordHelper.editReply(interaction, 'The user ' + `<@${user.id}>` + ' (' + user.username + ') was sanctioned for ' + type
 			+ ' for ' + amount + ' events!');
 	},

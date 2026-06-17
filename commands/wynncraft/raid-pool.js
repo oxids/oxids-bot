@@ -17,7 +17,7 @@ let intervals = []; // All intervals across all bot instances
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('raid-pool')
-        .setDescription('Displays the current Raid loot pool & aspects and might automatically post updates.')
+        .setDescription('Displays the current Raid lootpool & aspects and might automatically post updates.')
         .addBooleanOption(option =>
             option.setName('post-updates')
                 .setDescription('(Optional) Set to true if changes in the Raid pool should automatically be posted'))

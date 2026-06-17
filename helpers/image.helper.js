@@ -295,10 +295,5 @@ function cleanString(input, removeFinalDot) {
         }
     }
 
-    if (input.includes('Eldritch')) {
-        console.log("INPUT: '" + input + "'");
-        console.log("OUTPUT: '" + text + "'");
-
-    }
     return text;
 }

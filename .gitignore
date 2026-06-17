@@ -11,6 +11,7 @@ package-lock.json
 !assets/
 !assets/guild-xp-requirements.json
 !assets/guild-application-layouts/
+!assets/images/
 
 # Configs
 config.json

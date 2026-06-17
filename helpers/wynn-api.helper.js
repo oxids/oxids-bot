@@ -416,6 +416,18 @@ module.exports = {
             return null;
         }
     },
+    async getRaidPool() {
+        try {
+            const raidsJSON = await callWynnApi('/map/raids');
+            return await raidsJSON?.body?.json();
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getRaidPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getRaidPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
+    }
 }
 
 

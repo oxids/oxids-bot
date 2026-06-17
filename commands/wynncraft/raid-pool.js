@@ -253,7 +253,9 @@ module.exports = {
                 });
             }
 
-            addActiveTracker();
+            if (postUpdates) {
+                addActiveTracker();
+            }
         }
 
         async function createRaidImage(raid) {

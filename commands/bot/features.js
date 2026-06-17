@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const DiscordHelper = require("../helpers/discord.helper");
+const DiscordHelper = require("../../helpers/discord.helper");
 const _ = require("lodash");
 
 module.exports = {

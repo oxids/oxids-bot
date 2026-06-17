@@ -1,7 +1,7 @@
-const WynnApiHelper = require('../helpers/wynn-api.helper');
+const WynnApiHelper = require('../../helpers/wynn-api.helper');
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 var _ = require('lodash');
-const DiscordHelper = require("../helpers/discord.helper");
+const DiscordHelper = require("../../helpers/discord.helper");
 
 const MAX_PARTICIPANTS = 8;
 

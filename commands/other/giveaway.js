@@ -4,14 +4,14 @@ const { SlashCommandBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, Em
 	StringSelectMenuBuilder,
 	StringSelectMenuOptionBuilder
 } = require('discord.js');
-const { applicationServer } = require('../config.json');
+const { applicationServer } = require('../../config.json');
 
-const DiscordHelper = require('../helpers/discord.helper.js');
-const LogHelper = require('../helpers/log.helper.js');
+const DiscordHelper = require('../../helpers/discord.helper.js');
+const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
-const WynnApiHelper = require('../helpers/wynn-api.helper.js');
-const GiveawayHelper = require('../helpers/giveaway.helper.js');
-const VerificationHelper = require('../helpers/verification.helper.js');
+const WynnApiHelper = require('../../helpers/wynn-api.helper.js');
+const GiveawayHelper = require('../../helpers/giveaway.helper.js');
+const VerificationHelper = require('../../helpers/verification.helper.js');
 
 
 

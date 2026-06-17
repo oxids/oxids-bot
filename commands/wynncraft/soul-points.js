@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const WynnApiHelper = require('../helpers/wynn-api.helper.js');
-const DiscordHelper = require('../helpers/discord.helper.js');
-const FormatHelper = require('../helpers/format.helper.js');
+const WynnApiHelper = require('../../helpers/wynn-api.helper.js');
+const DiscordHelper = require('../../helpers/discord.helper.js');
+const FormatHelper = require('../../helpers/format.helper.js');
 var _ = require('lodash');
 
 module.exports = {

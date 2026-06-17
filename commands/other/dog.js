@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const AnimalApiHelper = require('../helpers/animal-api.helper.js');
+const AnimalApiHelper = require('../../helpers/animal-api.helper.js');
 var _ = require('lodash');
-const DiscordHelper = require("../helpers/discord.helper");
+const DiscordHelper = require("../../helpers/discord.helper");
 
 
 

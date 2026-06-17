@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const DiscordHelper = require('../helpers/discord.helper.js');
-const FileHelper = require('../helpers/file.helper.js');
-const LogHelper = require('../helpers/log.helper.js');
+const DiscordHelper = require('../../helpers/discord.helper.js');
+const FileHelper = require('../../helpers/file.helper.js');
+const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
 
 

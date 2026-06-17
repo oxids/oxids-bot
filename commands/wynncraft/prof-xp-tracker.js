@@ -1,11 +1,11 @@
 const { SlashCommandBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const WynnApiHelper = require('../helpers/wynn-api.helper.js');
+const WynnApiHelper = require('../../helpers/wynn-api.helper.js');
 var _ = require('lodash');
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-const DiscordHelper = require('../helpers/discord.helper.js');
-const FormatHelper = require('../helpers/format.helper.js');
-const RefreshHelper = require('../helpers/refresh.helper.js');
-const FileHelper = require('../helpers/file.helper.js');
+const DiscordHelper = require('../../helpers/discord.helper.js');
+const FormatHelper = require('../../helpers/format.helper.js');
+const RefreshHelper = require('../../helpers/refresh.helper.js');
+const FileHelper = require('../../helpers/file.helper.js');
 
 // Required for the canvas to parse the date labels
 require('chartjs-adapter-moment');

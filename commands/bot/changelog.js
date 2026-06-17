@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 var _ = require('lodash');
-const DiscordHelper = require('../helpers/discord.helper.js');
-const WynnApiHelper = require("../helpers/wynn-api.helper");
+const DiscordHelper = require('../../helpers/discord.helper.js');
+const WynnApiHelper = require("../../helpers/wynn-api.helper");
 
 module.exports = {
 	data: new SlashCommandBuilder()

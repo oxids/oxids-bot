@@ -84,6 +84,11 @@ function getHeader(type) {
 
 function getChangelog() {
 	return [
+		{ date: '2026-06-30', version: '1.0.3.6', content: [
+			{ type: TYPE_ENUM.ADD, command: '/raid-pool',
+				description: 'Add command to show the current raid pool & automatically post updates.' },
+		]},
+
 		{ date: '2026-06-16', version: '1.0.3.5', content: [
 			{ type: TYPE_ENUM.EDIT, command: '/giveaway',
 				description: 'The initiator of a giveaway and the winners will now be pinged after the winners were drawn.' },

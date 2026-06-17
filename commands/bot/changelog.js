@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 var _ = require('lodash');
 const DiscordHelper = require('../../helpers/discord.helper.js');
-const WynnApiHelper = require("../../helpers/wynn-api.helper");
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -87,6 +86,8 @@ function getChangelog() {
 		{ date: '2026-06-30', version: '1.0.3.6', content: [
 			{ type: TYPE_ENUM.ADD, command: '/raid-pool',
 				description: 'Add command to show the current raid pool & automatically post updates.' },
+			{ type: TYPE_ENUM.ADD, command: '/lootrun-pool',
+				description: 'Add command to show the current lootrun pool & automatically post updates.' },
 		]},
 
 		{ date: '2026-06-16', version: '1.0.3.5', content: [

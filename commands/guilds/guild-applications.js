@@ -5,6 +5,7 @@ const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
 
 // Existing layouts for guilds
+const DefaultLayout = require("../../assets/guild-application-layouts/_Default");
 const DevLayout = require("../../assets/guild-application-layouts/Dev");
 const ProfessionHeavenLayout = require("../../assets/guild-application-layouts/Profession Heaven");
 
@@ -126,8 +127,12 @@ module.exports = {
 				layout = GermanyLayout;
 				break;*/
 			default:
-				DiscordHelper.followUp(interaction, 'There is currently no layout set for your server. Please contact oxids if you\'d like to use guild applications to set your own layout!');
-				return;
+				layout = DefaultLayout;
+
+				if (!interaction.fromMemory) {
+					DiscordHelper.send(interaction.channel, 'There is no custom layout for your guild, so I used the default. Please contact oxids if you\'d like to use guild applications and set your own layout!');
+				}
+				break;
 		}
 
 		// Checks if the guild that started the tracker already has a tracker running

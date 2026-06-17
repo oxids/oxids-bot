@@ -416,6 +416,42 @@ module.exports = {
             return null;
         }
     },
+    async getRaidPool() {
+        try {
+            const raidsJSON = await callWynnApi('/map/raids');
+            return await raidsJSON?.body?.json();
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getRaidPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getRaidPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
+    },
+    async getLootrunPool() {
+        try {
+            const lootrunJSON = await callWynnApi('/map/camps');
+            return await lootrunJSON?.body?.json();
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getLootrunPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getLootrunPool(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
+    },
+    async getAllItems() {
+        try {
+            const itemJSON = await callWynnApi('/item/database?fullResult');
+            return await itemJSON?.body?.json();
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getAllItems(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getAllItems(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
+    }
 }
 
 

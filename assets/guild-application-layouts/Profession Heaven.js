@@ -142,44 +142,43 @@ module.exports = {
 
                 modal.addLabelComponents(
                     new LabelBuilder()
-                        .setLabel('Why PROF?')
+                        .setLabel('What\'s your reason to join PROF as a war member?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('why')
                             .setRequired(true)
                             .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('What\'s your reason to join PROF as a war member? (E.g. To defend the claim)')
+                            .setPlaceholder('E.g. To defend the claim')
                             .setMaxLength(100)),
                     new LabelBuilder()
-                        .setLabel('Builds')
+                        .setLabel('What war builds do you have access to?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('builds')
                             .setRequired(true)
                             .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('What war builds do you have access to? (E.g. Divzer DPs, Abso Healer)')
+                            .setPlaceholder('E.g. Divzer DPs, Abso Healer')
                             .setMaxLength(100)),
                     new LabelBuilder()
-                        .setLabel('Timezone')
+                        .setLabel('What is your GMT timezone?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('timezone')
                             .setRequired(true)
                             .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('What is your GMT timezone? (E.g. GMT +1)')
+                            .setPlaceholder('E.g. GMT +1')
                             .setMaxLength(20)),
                     new LabelBuilder()
-                        .setLabel('Previous guilds')
+                        .setLabel('What guilds were you previously part of?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('guilds')
                             .setRequired(false)
                             .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('What guilds were you previously part of? (e.g. PROF)')
+                            .setPlaceholder('E.g. PROF')
                             .setMaxLength(50)),
                     new LabelBuilder()
-                        .setLabel('Anything else?')
+                        .setLabel('What else would you like to add?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('other')
                             .setRequired(false)
                             .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('What else would you like to add?')
                             .setMaxLength(100)),
                 );
 
@@ -297,7 +296,7 @@ module.exports = {
                         // Checks the profession levels of the player
                         let classes = await getClasses(user.uuid);
                         if (!classes?.length) {
-                            await DiscordHelper.followUp(interaction, 'Classes for user `' + user.username + '` not found!');
+                            DiscordHelper.reply(message, 'Classes for user `' + user.username + '` not found!');
                             return;
                         }
 
@@ -307,7 +306,7 @@ module.exports = {
                         // Loads the professions of the highest level class
                         const highestClass = await getClass(user.uuid, _.first(classes).uuid);
                         if (!highestClass) {
-                            await DiscordHelper.followUp(i, 'Class "' + _.first(classes).uuid + '" could not be loaded!');
+                            DiscordHelper.reply(message, 'Class "' + _.first(classes).uuid + '" could not be loaded!');
                             return;
                         }
 

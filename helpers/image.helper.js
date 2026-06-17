@@ -3,12 +3,30 @@ const LogHelper = require('../helpers/log.helper.js');
 const WynnApiHelper = require('../helpers/wynn-api.helper.js');
 const {loadImage} = require("canvas");
 
-let ASPECT_DATA, TOME_DATA, WARD_DATA, ITEM_DATA;
+let ASPECT_DATA, WARD_DATA, ITEM_DATA;
 let assetsInitialized = false;
 
 module.exports = {
     async createItemImage(ctx, reward, i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding) {
         if (!assetsInitialized) {
+            async function initAssets() {
+
+                // Items & Aspects are loaded from Wynncraft API
+                ASPECT_DATA = await WynnApiHelper.getAllAspects() || [];
+                ITEM_DATA = await WynnApiHelper.getAllItems() || [];
+
+                // Wards
+                WARD_DATA = {
+                    'Blue': { icon: 'Blue', textColor: '#55F' },
+                    'Green': { icon: 'Green', textColor: '#5F5' },
+                    'Orange': { icon: 'Orange', textColor: '#fc9e56' },
+                    'Pink': { icon: 'Pink', textColor: '#e83cfb' },
+                    'Purple': { icon: 'Purple', textColor: '#F5F' },
+                    'Red': { icon: 'Red', textColor: '#F55' },
+                    'Yellow': { icon: 'Yellow', textColor: '#FF5' },
+                };
+            }
+
             await initAssets();
             assetsInitialized = true;
         }
@@ -24,6 +42,7 @@ module.exports = {
         let y = headerHeight + row * rowHeight;
 
         try {
+
             // Draw the background Card
             const cardPadding = 15;
             const textSpace = 50;
@@ -48,27 +67,29 @@ module.exports = {
 
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
-            // Item name with color
-            ctx.font = 'bold 16px sans-serif';
-
+            // Item names
             const sidePadding = 20;
             const maxWidth = itemWidth - (sidePadding * 2);
-            const words = rewardImageAndText.text.split(' ');
-            let line1 = '';
-            let line2 = '';
 
-            // Distribute words into two lines because Mythic names are way too long
-            for (const word of words) {
-                if (ctx.measureText(line1 + (line1 ? ' ' : '') + word).width <= maxWidth) {
-                    line1 += (line1 ? ' ' : '') + word;
-                } else {
-                    line2 += (line2 ? ' ' : '') + word;
+            ctx.font = 'bold 15px sans-serif';
+            this.drawTextWithOutline(ctx, getTruncatedText(ctx, cleanString(rewardImageAndText.text), maxWidth), x + (itemWidth / 2), y + itemHeight + 5, rewardImageAndText.textColor, 'black', 3);
+            if (rewardImageAndText.text2) {
+                ctx.font = 'bold 12px sans-serif';
+
+                let line1 = '';
+                let line2 = '';
+                for (let word of _.split(cleanString(rewardImageAndText.text2, true), ' ')) {
+                    if (!line2 && ctx.measureText(line1 + word + ' ').width <= maxWidth) {
+                        line1 += word + ' ';
+                    } else {
+                        line2 += word + ' ';
+                    }
                 }
-            }
 
-            this.drawTextWithOutline(ctx, line1, x + (itemWidth / 2), y + itemHeight + 10, rewardImageAndText.textColor, 'black', 3);
-            if (line2) {
-                this.drawTextWithOutline(ctx, line2, x + (itemWidth / 2), y + itemHeight + 30, rewardImageAndText.textColor, 'black', 3);
+                this.drawTextWithOutline(ctx, getTruncatedText(ctx, line1, maxWidth), x + (itemWidth / 2), y + itemHeight + 25, rewardImageAndText.textColor, 'black', 3);
+                if (line2.length > 0) {
+                    this.drawTextWithOutline(ctx, getTruncatedText(ctx, line2, maxWidth), x + (itemWidth / 2), y + itemHeight + 40, rewardImageAndText.textColor, 'black', 3);
+                }
             }
         } catch (e) {
             console.error('Asset could not be drawn: ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
@@ -89,19 +110,32 @@ module.exports = {
 async function getRewardImageAndText(reward) {
     let image;
     let text = reward.name;
+    let text2 = '';
     let textColor = '#FFFFFF';
 
-    let imageUrl;
+    let imageUrl, itemData;
     switch (reward.type) {
         case 'ASPECT':
             textColor = getRarityColor(reward.tier);
 
-            const aspectData = ASPECT_DATA[reward.name];
-            if (!aspectData) {
-                break;
+            itemData = _.find(ASPECT_DATA, aspect => reward.name.toLowerCase() === aspect.name?.toLowerCase());
+            if (itemData?.icon?.value?.name) {
+                text = itemData.name;
+                imageUrl = 'raid-aspects/' + itemData.icon.value.name;
             }
 
-            imageUrl = 'raid-aspects/' + aspectData.icon;
+            // Always display text from final tier
+            if (itemData?.tiers) {
+                text2 += ' ('
+
+                const tier = itemData.tiers[_.last(Object.keys(itemData.tiers))];
+                for (const desc of tier.description) {
+                    text2 += cleanString(desc) + ' ';
+                }
+
+                text2 = text2.substring(0, text2.length - 1);
+                text2 += ')'
+            }
             break;
         case 'TOME':
 
@@ -112,15 +146,33 @@ async function getRewardImageAndText(reward) {
 
             textColor = getRarityColor(reward.tier);
 
-            const tomeDataKey = _.find(Object.keys(TOME_DATA), key => {
-                return reward.name.toLowerCase().includes(key.toLowerCase());
-            });
-
-            if (tomeDataKey) {
-                imageUrl = 'tomes/' + TOME_DATA[tomeDataKey].icon;
-            } else {
-                imageUrl = 'tomes/Lootrunning';
+            itemData = _.find(ITEM_DATA, item => reward.name.toLowerCase() === item.displayName?.toLowerCase() && item.type !== 'ingredient');
+            if (itemData?.icon?.value?.name) {
+                text = itemData.displayName;
+                imageUrl = 'tomes/' + itemData.icon.value.name;
             }
+
+            // Add the identifications as well
+            if (itemData?.identifications) {
+                text2 += ' ('
+                for (const id of Object.keys(itemData.identifications)) {
+                    if (!id) {
+                        continue;
+                    }
+
+                    // Make the text a bit nicer
+                    const formattedId = id
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^./, (str) => str.toUpperCase())
+                        .trim();
+
+                    text2 += formattedId + ', ';
+                }
+
+                text2 = text2.substring(0, text2.length - 2);
+                text2 += ')'
+            }
+
             break;
         case 'WARD':
             const wardName = _.first(_.split(reward.name, ' '));
@@ -141,7 +193,7 @@ async function getRewardImageAndText(reward) {
 
             textColor = getRarityColor(reward.tier);
 
-            const itemData = _.find(ITEM_DATA, item => reward.name.toLowerCase() === item.displayName?.toLowerCase() && item.type !== "ingredient");
+            itemData = _.find(ITEM_DATA, item => reward.name.toLowerCase() === item.displayName?.toLowerCase() && item.type !== "ingredient");
             if (itemData?.icon?.value?.name) {
                 text = itemData.displayName;
                 imageUrl = 'items/' + itemData.icon.value.name;
@@ -155,14 +207,14 @@ async function getRewardImageAndText(reward) {
 
     try {
         image = await loadImage( './assets/images/' + (imageUrl ? imageUrl : 'Empty') + '.png');
-        return { image, text, textColor };
     } catch (e) {
         console.error('Asset could not be loaded: ' + imageUrl + ' ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
         LogHelper.writeToLog('Asset could not be loaded: ' + imageUrl + ' ' +  JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
 
         image = await loadImage( './assets/images/Empty' + '.png');
-        return { image, text, textColor };
     }
+
+    return { image, text, textColor, text2 };
 }
 
 function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
@@ -198,177 +250,55 @@ function getRarityColor(rarity) {
     return '#FFFFFF';
 }
 
-// Assets
-async function initAssets() {
-
-    // Items are loaded from Wynncraft API
-    ITEM_DATA = await WynnApiHelper.getAllItems() || [];
-
-    // Wards
-    WARD_DATA = {
-        'Blue': { icon: 'Blue', textColor: '#55F' },
-        'Green': { icon: 'Green', textColor: '#5F5' },
-        'Orange': { icon: 'Orange', textColor: '#fc9e56' },
-        'Pink': { icon: 'Pink', textColor: '#e83cfb' },
-        'Purple': { icon: 'Purple', textColor: '#F5F' },
-        'Red': { icon: 'Red', textColor: '#F55' },
-        'Yellow': { icon: 'Yellow', textColor: '#FF5' },
+function getTruncatedText(ctx, text, maxWidth) {
+    let width = ctx.measureText(text).width;
+    if (width <= maxWidth) {
+        return text;
     }
 
-    // Tomes
-    TOME_DATA = {
-        'Mysticism': { icon: 'Mysticism' },
-        'Marathon': { icon: 'Marathon' },
-        'Lootrunning': { icon: 'Lootrunning' },
-        'Guild': { icon: 'Guild' },
-        'Expertise': { icon: 'Expertise' },
-        'Defensive Mastery': { icon: 'Defensive Mastery' },
-        'Combat Mastery': { icon: 'Combat Mastery' },
-    };
+    let truncated = text;
+    while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
+        truncated = truncated.slice(0, -1);
+    }
 
-    // Aspects
-    ASPECT_DATA = {
+    return truncated + '...';
+}
 
-        // --- MAGE ---
-        "Aspect of the Apprentice's Bolt": { icon: "Mage" },
-        "Aspect of the Comet": { icon: "Mage" },
-        "Aspect of the Dimension's Door": { icon: "Mage" },
-        "Aspect of the Magic Missile": { icon: "Mage" },
-        "Aspect of the Ray of Frost": { icon: "Mage" },
-        "Aspect of the Savior": { icon: "Mage" },
-        "Aspect of a Scorching Sun": { icon: "Mage" },
-        "Aspect of a Thousand Hours": { icon: "Mage" },
-        "Aspect of Wind Walking": { icon: "Mage" },
-        "Aspect of Indoctrination": { icon: "Mage" },
-        "Aspect of the Vast Emptiness": { icon: "Mage" },
-        "Aspect of Burning Providence": { icon: "Mage" },
-        "Aspect of Fatal Fulguration": { icon: "Mage" },
-        "Aspect of the Inescapable Void": { icon: "Mage" },
-        "Aspect of Manaflux": { icon: "Mage" },
-        "Aspect of Mystic Transfer": { icon: "Mage" },
-        "Aspect of Runic Extravagance": { icon: "Mage" },
-        "Aspect of Shining Status": { icon: "Mage" },
-        "Aspect of Futures Rewritten": { icon: "Mage" },
-        "Aspect of the Indescribable": { icon: "Mage" },
-        "Aspect of the Forbidden Ritual": { icon: "Mage" },
-        "Aspect of Limitless Knowledge": { icon: "Mage" },
-        "Riftwalker's Embodiment of Reality Alteration": { icon: "Mage" },
-        "Light Bender's Embodiment of Celestial Brilliance": { icon: "Mage" },
-        "Arcanist's Embodiment of Total Obliteration": { icon: "Mage" },
-        "Mage's Embodiment of Morbid Curiosity": { icon: "Mage" },
+// This was fully written by AI
+function cleanString(input, removeFinalDot) {
 
-        // --- ARCHER ---
-        "Aspect of Battlement Fortification": { icon: "Archer" },
-        "Aspect of Bullet Hell": { icon: "Archer" },
-        "Aspect of Clinging Lichen": { icon: "Archer" },
-        "Aspect of Dynamic Entry": { icon: "Archer" },
-        "Aspect of Extreme Firepower": { icon: "Archer" },
-        "Aspect of Further Horizons": { icon: "Archer" },
-        "Aspect of Illegal Explosives": { icon: "Archer" },
-        "Aspect of the Iron String": { icon: "Archer" },
-        "Aspect of the North Wind": { icon: "Archer" },
-        "Aspect of the Thunderbolt": { icon: "Archer" },
-        "Aspect of the Barley-Woven": { icon: "Archer" },
-        "Aspect of Olfactorial Enhancement": { icon: "Archer" },
-        "Aspect of the Beastmaster": { icon: "Archer" },
-        "Aspect of Chaotic Demolition": { icon: "Archer" },
-        "Aspect of Extreme Current": { icon: "Archer" },
-        "Aspect of Fragmentation Rounds": { icon: "Archer" },
-        "Aspect of the Heavenly Mandate": { icon: "Archer" },
-        "Aspect of the Inexhaustible Quiver": { icon: "Archer" },
-        "Aspect of the Poltergeist": { icon: "Archer" },
-        "Aspect of the Steadying Hand": { icon: "Archer" },
-        "Aspect of Undercrank": { icon: "Archer" },
-        "Aspect of the Battle-Fletcher": { icon: "Archer" },
-        "Boltslinger's Embodiment of Rended Skies": { icon: "Archer" },
-        "Trapper's Embodiment of Persistence Predation": { icon: "Archer" },
-        "Sharpshooter's Embodiment of Laser Precision": { icon: "Archer" },
-        "Archer's Embodiment of Perceptive Finesse": { icon: "Archer" },
+    // 1. Remove HTML tags
+    let text = input.replace(/<[^>]*>?/gm, '');
 
-        // --- WARRIOR ---
-        "Aspect of the Anvil Drop": { icon: "Warrior" },
-        "Aspect of Bovine Inspiration": { icon: "Warrior" },
-        "Aspect of Deafening Echoes": { icon: "Warrior" },
-        "Aspect of Earthshaking": { icon: "Warrior" },
-        "Aspect of Maniacal Frisson": { icon: "Warrior" },
-        "Aspect of the Megaphone": { icon: "Warrior" },
-        "Aspect of Overflowing Hope": { icon: "Warrior" },
-        "Aspect of the Returning Javelin": { icon: "Warrior" },
-        "Aspect of Skyward Strikes": { icon: "Warrior" },
-        "Aspect of Steel Chords": { icon: "Warrior" },
-        "Aspect of Turbulence": { icon: "Warrior" },
-        "Aspect of the Humming Choir": { icon: "Warrior" },
-        "Aspect of the Crimson Scrivener": { icon: "Warrior" },
-        "Aspect of the Golden Dawn": { icon: "Warrior" },
-        "Aspect of the Berserker": { icon: "Warrior" },
-        "Aspect of Empowering Fantasy": { icon: "Warrior" },
-        "Aspect of Hyper-Perception": { icon: "Warrior" },
-        "Aspect of Rallying Fervor": { icon: "Warrior" },
-        "Aspect of Rekindling": { icon: "Warrior" },
-        "Aspect of Searing Friction": { icon: "Warrior" },
-        "Aspect of Seeing Stars": { icon: "Warrior" },
-        "Aspect of the Tightrope Walk": { icon: "Warrior" },
-        "Aspect of Unquenching Flames": { icon: "Warrior" },
-        "Aspect of the Enforcer": { icon: "Warrior" },
-        "Fallen's Embodiment of Blind Fury": { icon: "Warrior" },
-        "Battle Monk's Embodiment of Complete Synchrony": { icon: "Warrior" },
-        "Paladin's Embodiment of Undying Determination": { icon: "Warrior" },
-        "Warrior's Embodiment of Everlasting Perseverance": { icon: "Warrior" },
+    // 2. Remove Unicode icons (Private Use Area)
+    text = text.replace(/[\uE000-\uF8FF]/g, '');
 
-        // --- ASSASSIN ---
-        "Aspect of Athleticism": { icon: "Assassin" },
-        "Aspect of the Chain Knife": { icon: "Assassin" },
-        "Aspect of Enduring Illusions": { icon: "Assassin" },
-        "Aspect of Flamboyance": { icon: "Assassin" },
-        "Aspect of the Fog Machine": { icon: "Assassin" },
-        "Aspect of the Pinwheel": { icon: "Assassin" },
-        "Aspect of Redoublement": { icon: "Assassin" },
-        "Aspect of Shadow Armor": { icon: "Assassin" },
-        "Aspect of the Stellar Flurry": { icon: "Assassin" },
-        "Aspect of the Agile Blade": { icon: "Assassin" },
-        "Aspect of the Airborne": { icon: "Assassin" },
-        "Aspect of the Calling Card": { icon: "Assassin" },
-        "Aspect of Clouded Vision": { icon: "Assassin" },
-        "Aspect of the Dagger's Silhouette": { icon: "Assassin" },
-        "Aspect of the Disappearing Act": { icon: "Assassin" },
-        "Aspect of False Coercing": { icon: "Assassin" },
-        "Aspect of the Pernicious Prankster": { icon: "Assassin" },
-        "Aspect of Seeking Stars": { icon: "Assassin" },
-        "Aspect of Sleight-Of-Hand": { icon: "Assassin" },
-        "Aspect of the Unstoppable Force": { icon: "Assassin" },
-        "Aspect of Unyielding Fate": { icon: "Assassin" },
-        "Aspect of Visual Distortion": { icon: "Assassin" },
-        "Shadestepper's Embodiment of Unseen Execution": { icon: "Assassin" },
-        "Trickster's Embodiment of Malevolent Mischief": { icon: "Assassin" },
-        "Acrobat's Embodiment of Gravity Defiance": { icon: "Assassin" },
-        "Assassin's Embodiment of Otherworldly Detachment": { icon: "Assassin" },
+    // 3. Remove content inside brackets ONLY if it's just whitespace or symbols
+    text = text.replace(/\(([^)]*)\)/g, (match, contents) => {
+        // Remove everything that isn't a letter or number from inside the ()
+        const cleanedContents = contents.replace(/[^\w\s+-.,%]/g, '').trim();
 
-        // --- SHAMAN ---
-        "Aspect of Acceleration": { icon: "Shaman" },
-        "Aspect of the Alraune's Roots": { icon: "Shaman" },
-        "Aspect of Emanant Force": { icon: "Shaman" },
-        "Aspect of Empathy": { icon: "Shaman" },
-        "Aspect of Incineration": { icon: "Shaman" },
-        "Aspect of Lashing Fire": { icon: "Shaman" },
-        "Aspect of the Monolith": { icon: "Shaman" },
-        "Aspect of Motivation": { icon: "Shaman" },
-        "Aspect of Occupation": { icon: "Shaman" },
-        "Aspect of Reverberation": { icon: "Shaman" },
-        "Aspect of Surging Presence": { icon: "Shaman" },
-        "Aspect of Summer Storms": { icon: "Shaman" },
-        "Aspect of the Bodyguard": { icon: "Shaman" },
-        "Aspect of the Blurred Line": { icon: "Shaman" },
-        "Aspect of Gushing Blood": { icon: "Shaman" },
-        "Aspect of the Amphibian": { icon: "Shaman" },
-        "Aspect of the Beckoned Legion": { icon: "Shaman" },
-        "Aspect of the Channeler": { icon: "Shaman" },
-        "Aspect of Exsanguination": { icon: "Shaman" },
-        "Aspect of Seismic Sense": { icon: "Shaman" },
-        "Aspect of Stances": { icon: "Shaman" },
-        "Aspect of the Artisan": { icon: "Shaman" },
-        "Summoner's Embodiment of the Omnipotent Overseer": { icon: "Shaman" },
-        "Ritualist's Embodiment of the Ancestral Avatar": { icon: "Shaman" },
-        "Acolyte's Embodiment of Unwavering Adherence": { icon: "Shaman" },
-        "Shaman's Embodiment of Serene Harmony": { icon: "Shaman" }
-    };
+        // If nothing is left inside, return empty string to remove the ()
+        // Otherwise, return the cleaned contents inside the ()
+        return cleanedContents.length > 0 ? `(${cleanedContents})` : '';
+    });
+
+    // 4. Cleanup: Remove double spaces and trim
+    text = text.replace(/\s+/g, ' ').trim();
+
+    // 5. Remove final dot if requested
+    if (removeFinalDot) {
+        if (text.endsWith('.')) {
+            text = text.slice(0, -1);
+        } else if (text.endsWith('.)')) {
+            text = text.slice(0, -2) + ')';
+        }
+    }
+
+    if (input.includes('Eldritch')) {
+        console.log("INPUT: '" + input + "'");
+        console.log("OUTPUT: '" + text + "'");
+
+    }
+    return text;
 }

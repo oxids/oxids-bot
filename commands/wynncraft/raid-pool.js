@@ -336,6 +336,11 @@ module.exports = {
                 await ImageHelper.createItemImage(ctx, raid.rewards[i], i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding);
             }
 
+            // Border
+            ctx.lineWidth = 20;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+
             return new AttachmentBuilder(canvas.toBuffer(), { name: `${raid.internalName}.png` });
         }
     }

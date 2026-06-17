@@ -10,17 +10,17 @@ const { AttachmentBuilder } = require('discord.js');
 
 
 
-const RAIDPOOL_TRACKERS_FILENAME = './assets/raid-pool-trackers.json';
+const LOOTRUNPOOL_TRACKERS_FILENAME = './assets/loot-pool-trackers.json';
 
 let intervals = []; // All intervals across all bot instances
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('raid-pool')
-        .setDescription('Displays the current Raid loot pool & aspects and might automatically post updates.')
+        .setName('lootrun-pool')
+        .setDescription('Displays the current lootrun loot pool and might automatically post updates.')
         .addBooleanOption(option =>
             option.setName('post-updates')
-                .setDescription('(Optional) Set to true if changes in the Raid pool should automatically be posted'))
+                .setDescription('(Optional) Set to true if changes in the lootrun pool should automatically be posted'))
         .addRoleOption(option =>
             option.setName('ping-role')
                 .setDescription('(optional) Role to be pinged when the pool changes'))
@@ -29,7 +29,7 @@ module.exports = {
                 .setDescription('(Optional) Set to true if you want the bot to stop the automatic updates'))
         .setDMPermission(false),
     async onStartup(client) {
-        let activeTrackers = FileHelper.readFromFile(RAIDPOOL_TRACKERS_FILENAME);
+        let activeTrackers = FileHelper.readFromFile(LOOTRUNPOOL_TRACKERS_FILENAME);
         if (!activeTrackers) {
             return;
         }
@@ -39,8 +39,8 @@ module.exports = {
             return a.guildId === b.guildId;
         });
 
-        console.log('Starting ' + activeTrackers.length + ' raid-pool from memory!');
-        LogHelper.writeToLog('Starting ' + activeTrackers.length + ' raid-pool from memory!\n' + JSON.stringify(activeTrackers));
+        console.log('Starting ' + activeTrackers.length + ' lootrun-pool from memory!');
+        LogHelper.writeToLog('Starting ' + activeTrackers.length + ' lootrun-pool from memory!\n' + JSON.stringify(activeTrackers));
 
         for (let tracker of _.cloneDeep(activeTrackers)) {
             try {
@@ -48,19 +48,19 @@ module.exports = {
                 // Tell the command that its an execution from memory and sets used functions
                 const guild = await DiscordHelper.fetch(client?.guilds, tracker.guildId);
                 if (!guild) {
-                    console.log('Raid Pool for guild ' + tracker.guildId + ' could not be started!');
-                    LogHelper.writeToLog('Raid Pool for guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
+                    console.log('Lootrun Pool for guild ' + tracker.guildId + ' could not be started!');
+                    LogHelper.writeToLog('Lootrun Pool for guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
                     activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId);
-                    FileHelper.writeToFile(RAIDPOOL_TRACKERS_FILENAME, activeTrackers);
+                    FileHelper.writeToFile(LOOTRUNPOOL_TRACKERS_FILENAME, activeTrackers);
                     continue;
                 }
 
                 const channel = await DiscordHelper.fetch(guild?.channels, tracker.channelId);
                 if (!channel) {
-                    console.log('Raid Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!');
-                    LogHelper.writeToLog('Raid Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
+                    console.log('Lootrun Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!');
+                    LogHelper.writeToLog('Lootrun Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(tracker));
                     activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId && a.channelId === tracker.channelId);
-                    FileHelper.writeToFile(RAIDPOOL_TRACKERS_FILENAME, activeTrackers);
+                    FileHelper.writeToFile(LOOTRUNPOOL_TRACKERS_FILENAME, activeTrackers);
                     continue;
                 }
 
@@ -74,35 +74,35 @@ module.exports = {
 
                 await this.execute(tracker);
 
-                LogHelper.writeToLog('Started a Raid Pool for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
+                LogHelper.writeToLog('Started a Lootrun Pool for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
             } catch (e) {
                 console.log(e);
-                console.log('Raid Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
-                LogHelper.writeToLog('Raid Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(e, Object.getOwnPropertyNames(e)) + '\n' + JSON.stringify(tracker));
+                console.log('Lootrun Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+                LogHelper.writeToLog('Lootrun Pool for channel ' + tracker.channelId + ' in guild ' + tracker.guildId + ' could not be started!\n' + JSON.stringify(e, Object.getOwnPropertyNames(e)) + '\n' + JSON.stringify(tracker));
                 activeTrackers = _.reject(activeTrackers, a => a.guildId === tracker.guildId && a.channelId === tracker.channelId);
-                FileHelper.writeToFile(RAIDPOOL_TRACKERS_FILENAME, activeTrackers);
+                FileHelper.writeToFile(LOOTRUNPOOL_TRACKERS_FILENAME, activeTrackers);
             }
         }
 
         // Removes the trackers which couldnt be started
-        console.log('Actually started ' + activeTrackers.length + ' Raid Pool from memory!');
-        LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' Raid Pool from memory!');
+        console.log('Actually started ' + activeTrackers.length + ' Lootrun Pool from memory!');
+        LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' Lootrun Pool from memory!');
     },
     async execute(interaction) {
         let interval;
 
-        let postUpdates, pingRole, disable, raidpool, trackerId;
+        let postUpdates, pingRole, disable, lootrunpool, trackerId;
         if (interaction.fromMemory) {
             postUpdates = interaction.options.postUpdates;
             pingRole = interaction.options.pingRole;
             trackerId = interaction.trackerId;
-            raidpool = interaction.raidpool;
+            lootrunpool = interaction.lootrunpool;
         } else {
             postUpdates = interaction.options.getBoolean('post-updates');
             pingRole = interaction.options.getRole('ping-role')?.id;
             disable = interaction.options.getBoolean('disable');
             trackerId = new Date().getTime() + Math.floor(Math.random() * 100);
-            raidpool = null;
+            lootrunpool = null;
         }
 
         // Tells discord the command is being processed
@@ -120,32 +120,32 @@ module.exports = {
         const existingInterval = intervals.find(i => i.guildId === interaction.guild.id);
         if (existingInterval && (postUpdates || disable)) {
             removeActiveTracker(true);
-            DiscordHelper.followUp(interaction, 'Stopped the existing raid-pool tracker.');
+            DiscordHelper.followUp(interaction, 'Stopped the existing lootrun-pool tracker.');
 
             if (disable) {
                 return;
             }
         } else if (disable) {
-            DiscordHelper.followUp(interaction, 'There are no active raid-pool trackers for this server.');
+            DiscordHelper.followUp(interaction, 'There are no active lootrun-pool trackers for this server.');
             return;
         }
 
         if (postUpdates) {
             interval = setInterval(async () => {
                 try {
-                    processRaidpoolData(await WynnApiHelper.getRaidPool());
+                    processLootrunpoolData(await WynnApiHelper.getRaidPool());
                 } catch (e) {
-                    console.log('raid-pool: interval: ', e);
-                    LogHelper.writeToLog('raid-pool: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+                    console.log('lootrun-pool: interval: ', e);
+                    LogHelper.writeToLog('lootrun-pool: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
                 }
             }, 1000 * 60 * 1);
         }
 
         try {
-            processRaidpoolData(await WynnApiHelper.getRaidPool(), !interaction.fromMemory);
+            processLootrunpoolData(await WynnApiHelper.getLootrunPool(), !interaction.fromMemory);
         } catch (e) {
-            console.log('raid-pool: initial start:', e);
-            LogHelper.writeToLog('raid-pool: initial start:' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            console.log('lootrun-pool: initial start:', e);
+            LogHelper.writeToLog('lootrun-pool: initial start:' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
         }
 
 
@@ -159,7 +159,7 @@ module.exports = {
                 postUpdates: postUpdates,
                 pingRole: pingRole,
                 trackerId: trackerId,
-                raidpool: raidpool
+                lootrunpool: lootrunpool
             });
 
             updateTrackersFile();
@@ -182,7 +182,7 @@ module.exports = {
         }
 
         function updateTrackersFile(removeCurrent = false) {
-            let activeTrackers = FileHelper.readFromFile(RAIDPOOL_TRACKERS_FILENAME);
+            let activeTrackers = FileHelper.readFromFile(LOOTRUNPOOL_TRACKERS_FILENAME);
             if (!activeTrackers) {
                 activeTrackers = [];
             }
@@ -193,7 +193,7 @@ module.exports = {
                 activeTrackers.push(getTrackerForFile());
             }
 
-            FileHelper.writeToFile(RAIDPOOL_TRACKERS_FILENAME, activeTrackers);
+            FileHelper.writeToFile(LOOTRUNPOOL_TRACKERS_FILENAME, activeTrackers);
         }
 
         function getTrackerForFile() {
@@ -205,22 +205,22 @@ module.exports = {
                     pingRole: pingRole,
                 },
                 trackerId: trackerId,
-                raidpool: raidpool
+                lootrunpool: lootrunpool
             };
         }
 
-        async function processRaidpoolData(newRaidpool, initialCall = false) {
-            if (!newRaidpool || _.isEqual(newRaidpool, raidpool)) {
+        async function processLootrunpoolData(newLootrunpool, initialCall = false) {
+            if (!newLootrunpool || _.isEqual(newLootrunpool, lootrunpool)) {
                 return;
             }
 
-            raidpool = _.cloneDeep(newRaidpool);
+            lootrunpool = _.cloneDeep(newLootrunpool);
 
             let text = '';
             if (initialCall) {
                 text += '';
             } else {
-                text += '# New Raidpool detected';
+                text += '# New Lootrun Pool detected';
             }
 
             if (!initialCall) {
@@ -228,12 +228,12 @@ module.exports = {
                     text += `\n<@&${ pingRole }>`;
                 }
 
-                text += '\n\n-# This is an automated message for raid pool changes. Run `/raid-pool disable:true` to turn them off.'
+                text += '\n\n-# This is an automated message for Lootrun Pool changes. Run `/lootrun-pool disable:true` to turn them off.'
             }
 
             const attachments = [];
-            for (const raid of newRaidpool) {
-                const attachment = await createRaidImage(raid);
+            for (const lootrun of newLootrunpool) {
+                const attachment = await createLootrunImage(lootrun);
                 if (!attachment) {
                     continue;
                 }
@@ -256,16 +256,18 @@ module.exports = {
             addActiveTracker();
         }
 
-        async function createRaidImage(raid) {
-            raid = _.cloneDeep(raid);
+        async function createLootrunImage(lootrun) {
+            lootrun = _.cloneDeep(lootrun);
 
             // Filter rewards and display wards in front
-            if (!raid?.rewards?.length) {
+            if (!lootrun?.rewards?.length) {
                 return null;
             }
 
-            raid.rewards = _.orderBy(_.filter(raid.rewards, reward => {
-                if (!reward?.type || (reward.type !== 'WARD' && reward.type !== 'ASPECT' && reward.type !== 'TOME')) {
+            lootrun.rewards = _.orderBy(_.filter(lootrun.rewards, reward => {
+                if (!reward?.type
+                    || (reward.type !== 'WARD' && reward.type !== 'ITEM' && reward.type !== 'TOME')
+                    || (reward.type === 'ITEM' && !reward.tier)) {
                     return false;
                 }
 
@@ -273,11 +275,17 @@ module.exports = {
             }), reward => {
                 switch (reward.type) {
                     case 'WARD':
-                        return 0;
-                    case 'ASPECT':
-                        return 1;
-                    case 'TOME':
                         return 2;
+                    case 'ITEM':
+                        if (reward.tier === "MYTHIC") {
+                            if (reward.shiny) {
+                                return 0;
+                            }
+                            return 1;
+                        }
+                        return 4;
+                    case 'TOME':
+                        return 3;
                 }
             });
 
@@ -288,7 +296,7 @@ module.exports = {
             const rowHeight = 180;
             const headerHeight = 80;
 
-            const rows = Math.ceil(raid.rewards.length / itemsPerRow);
+            const rows = Math.ceil(lootrun.rewards.length / itemsPerRow);
             const canvasWidth = (itemsPerRow * (itemWidth + padding)) + padding;
             const canvasHeight = headerHeight + (rows * rowHeight);
 
@@ -298,11 +306,11 @@ module.exports = {
             // 1. Draw Global Background
             let bgImage;
             try {
-                bgImage = await loadImage('./assets/images/raid-backgrounds/' + raid.name + '.png');
+                bgImage = await loadImage('./assets/images/lootrun-backgrounds/' + lootrun.name + '.png');
             } catch (e) {
-                console.error('Asset could not be drawn: ' + './assets/images/raid-backgrounds/' + raid.name + '.png');
-                LogHelper.writeToLog('Asset could not be drawn: ' + './assets/images/raid-backgrounds/' + raid.name + '.png');
-                bgImage = await loadImage('./assets/images/raid-backgrounds/Default.png');
+                console.error('Asset could not be drawn: ' + './assets/images/lootrun-backgrounds/' + lootrun.name + '.png');
+                LogHelper.writeToLog('Asset could not be drawn: ' + './assets/images/lootrun-backgrounds/' + lootrun.name + '.png');
+                bgImage = await loadImage('./assets/images/lootrun-backgrounds/Default.png');
             }
 
             ctx.drawImage(bgImage, 0, 0, canvasWidth, canvasHeight);
@@ -310,31 +318,13 @@ module.exports = {
             // Header Text
             ctx.font = 'bold 40px sans-serif';
             ctx.fillStyle = '#FFFFFF';
-            switch (raid.name) {
-                case 'Nest of the Grootslangs':
-                    ctx.fillStyle = '#55FF00';
-                    break;
-                case 'Orphion\'s Nexus of Light':
-                    ctx.fillStyle = '#FFEE77';
-                    break;
-                case 'The Canyon Colossus':
-                    ctx.fillStyle = '#06402B';
-                    break;
-                case 'The Nameless Anomaly':
-                    ctx.fillStyle = '#00DDFF';
-                    break;
-                case 'The Wartorn Palace':
-                    ctx.fillStyle = '#640000';
-                    break;
+            ImageHelper.drawTextWithOutline(ctx, lootrun.name, canvasWidth / 2, 60, ctx.fillStyle, '#000000', 6);
+
+            for (let i = 0; i < lootrun.rewards.length; i++) {
+                await ImageHelper.createItemImage(ctx, lootrun.rewards[i], i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding);
             }
 
-            ImageHelper.drawTextWithOutline(ctx, raid.name, canvasWidth / 2, 60, ctx.fillStyle, '#000000', 6);
-
-            for (let i = 0; i < raid.rewards.length; i++) {
-                await ImageHelper.createItemImage(ctx, raid.rewards[i], i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding);
-            }
-
-            return new AttachmentBuilder(canvas.toBuffer(), { name: `${raid.internalName}.png` });
+            return new AttachmentBuilder(canvas.toBuffer(), { name: `${lootrun.internalName}.png` });
         }
     }
 };

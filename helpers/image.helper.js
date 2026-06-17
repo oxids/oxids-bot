@@ -1,12 +1,18 @@
 var _ = require('lodash');
 const LogHelper = require('../helpers/log.helper.js');
+const WynnApiHelper = require('../helpers/wynn-api.helper.js');
 const {loadImage} = require("canvas");
 
-let ASPECT_DATA, TOME_DATA, WARD_DATA;
-initAssets();
+let ASPECT_DATA, TOME_DATA, WARD_DATA, ITEM_DATA;
+let assetsInitialized = false;
 
 module.exports = {
     async createItemImage(ctx, reward, i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding) {
+        if (!assetsInitialized) {
+            await initAssets();
+            assetsInitialized = true;
+        }
+
         const rewardImageAndText = await getRewardImageAndText(reward);
         if (!rewardImageAndText) {
             return;
@@ -112,6 +118,8 @@ async function getRewardImageAndText(reward) {
 
             if (tomeDataKey) {
                 imageUrl = 'tomes/' + TOME_DATA[tomeDataKey].icon;
+            } else {
+                imageUrl = 'tomes/Lootrunning';
             }
             break;
         case 'WARD':
@@ -124,14 +132,33 @@ async function getRewardImageAndText(reward) {
             textColor = wardData.textColor;
             imageUrl = 'wards/' + wardData.icon;
             break;
+        case 'ITEM':
+
+            // Some items don't actually exist, but the API thinks they do
+            if (!reward.tier) {
+                return null;
+            }
+
+            textColor = getRarityColor(reward.tier);
+
+            const itemData = _.find(ITEM_DATA, item => reward.name.toLowerCase() === item.displayName?.toLowerCase() && item.type !== "ingredient");
+            if (itemData?.icon?.value?.name) {
+                text = itemData.displayName;
+                imageUrl = 'items/' + itemData.icon.value.name;
+            }
+
+            if (reward.shiny) {
+                text += ' ⭐';
+            }
+            break;
     }
 
     try {
         image = await loadImage( './assets/images/' + (imageUrl ? imageUrl : 'Empty') + '.png');
         return { image, text, textColor };
     } catch (e) {
-        console.error('Asset could not be loaded: ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
-        LogHelper.writeToLog('Asset could not be loaded: ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
+        console.error('Asset could not be loaded: ' + imageUrl + ' ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
+        LogHelper.writeToLog('Asset could not be loaded: ' + imageUrl + ' ' +  JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
 
         image = await loadImage( './assets/images/Empty' + '.png');
         return { image, text, textColor };
@@ -156,6 +183,10 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
 
 function getRarityColor(rarity) {
     switch (rarity?.toLowerCase()) {
+        case 'unique':
+            return '#ffe600';
+        case 'rare':
+            return '#ff00dd';
         case 'legendary':
             return '#5FF';
         case 'fabled':
@@ -168,7 +199,10 @@ function getRarityColor(rarity) {
 }
 
 // Assets
-function initAssets() {
+async function initAssets() {
+
+    // Items are loaded from Wynncraft API
+    ITEM_DATA = await WynnApiHelper.getAllItems() || [];
 
     // Wards
     WARD_DATA = {

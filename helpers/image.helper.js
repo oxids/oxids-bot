@@ -148,7 +148,7 @@ async function getRewardImageAndText(reward) {
             }
 
             if (reward.shiny) {
-                text += ' ⭐';
+                text += ' (Shiny)';
             }
             break;
     }

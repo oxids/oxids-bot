@@ -112,6 +112,7 @@ module.exports = {
             const hasKick = (await DiscordHelper.fetch(interaction.guild?.members, interaction.user.id))?.permissions?.has(PermissionFlagsBits.KickMembers);
             if (!hasKick) {
                 DiscordHelper.editReply(interaction, 'You don\'t have permissions to do this!');
+                return;
             }
         }
 
@@ -133,7 +134,7 @@ module.exports = {
         if (postUpdates) {
             interval = setInterval(async () => {
                 try {
-                    processLootrunpoolData(await WynnApiHelper.getRaidPool());
+                    processLootrunpoolData(await WynnApiHelper.getLootrunPool());
                 } catch (e) {
                     console.log('lootrun-pool: interval: ', e);
                     LogHelper.writeToLog('lootrun-pool: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));

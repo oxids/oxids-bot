@@ -112,6 +112,7 @@ module.exports = {
             const hasKick = (await DiscordHelper.fetch(interaction.guild?.members, interaction.user.id))?.permissions?.has(PermissionFlagsBits.KickMembers);
             if (!hasKick) {
                 DiscordHelper.editReply(interaction, 'You don\'t have permissions to do this!');
+                return;
             }
         }
 

@@ -22,7 +22,7 @@ module.exports = {
             const fileTime = _.find(FileHelper.readFromFile(WORLD_EVENT_TIMES_FILENAME), time => time.type === eventType);
             const fileDate = fileTime ? new Date(fileTime.date) : null;
             if (fileDate && fileDate > new Date()) {
-                worldEvent = { predicted: false, datetime_utc: fileDate };
+                worldEvent = { predicted: false, datetime_utc: fileDate.toISOString() };
             }
 
             // Otherwise it tries to load a current world event from the Wynncraft API

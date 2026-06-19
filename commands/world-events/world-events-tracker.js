@@ -1209,36 +1209,46 @@ module.exports = {
 			let partyEmbeds = _.map(parties, (party, index) => {
 
 				// Header
-				const partyLeader = _.find(party, person => person.partyLeader);
 				const headerFields = [
 					{ name: 'Slots', value: _.filter(party, p => !!p.id).length + ' / 10', inline: true },
-					{ name: 'Region', value: partyLeader?.partyWorld
-							? getWorldIcon(partyLeader.partyWorld?.toUpperCase()) + ' ' + partyLeader.partyWorld.toUpperCase()
-							: ' ', inline: true },
-					{ name: 'Leader', value: partyLeader?.name ? '👑 ' + partyLeader.name : ' ', inline: true },
 				];
+
+				const partyLeader = _.find(party, person => person.partyLeader);
+				if (partyLeader) {
+					headerFields.push({ name: 'Leader', value: partyLeader?.name ? '👑 ' + partyLeader.name : ' ', inline: true });
+
+					if (partyLeader.partyWorld) {
+						headerFields.push({
+							name: 'Region',
+							value: getWorldIcon(partyLeader.partyWorld?.toUpperCase()) + ' ' + partyLeader.partyWorld.toUpperCase(),
+							inline: true
+						});
+					}
+				}
 
 				// Members
 				let memberFields = _.map(_.filter(party, p => !!p.id), (person, index2) => {
-					const slot = '**' + (index2 % 10 + 1).toString().padStart(2) + '\\. **';
+					const slot = '**' + (index2 % 10 + 1).toString().padStart(2) + '\\) **';
 
 					if (!person.id) {
 						return null;
 					}
 
 					return {
-						value: slot + ' **' + DiscordHelper.sanitizeString(person.name) + '**' + ` <@${person.id}>`
-							+ '\n' + (person.partyRole ? (getPartyRole(person.partyRole).iconSmall ?? '') + ' ' : '') // Small icon bc the custom ones have too many characters
+						value: slot + ' '
+							+ (person.partyRole ? (getPartyRole(person.partyRole).iconSmall ?? '') + ' ' : '') // Small icon bc the custom ones have too many characters
 							+ (person.scrolls ? '📜 ' : '')
-							+ (person.build ? ' *' + DiscordHelper.sanitizeString(person.build) + '*' : '')
-							+ (person.info ? '\n 📝 ' + DiscordHelper.sanitizeString(person.info) : '')
+							+ ' **' + DiscordHelper.sanitizeString(person.name) + '**'
+							+ (person.build ? ' using *' + DiscordHelper.sanitizeString(person.build) + '*' : '')
+							+ ` (<@${person.id}>)`
+							+ (person.info ? '\n  📝' + DiscordHelper.sanitizeString(person.info) : '')
 					};
 				});
 
 				// Available space
 				memberFields = _.filter(memberFields, f => !!f);
 				if (memberFields?.length < 10) {
-					memberFields.push({ value: '**' + (memberFields.length + 1).toString().padStart(2) + '\\. **' + '<Available>' });
+					memberFields.push({ value: '**' + (memberFields.length + 1).toString().padStart(2) + '\\) **' + '<Available>' });
 				}
 
 				return DiscordHelper.getEmbeds(_.concat(headerFields, memberFields), 1,

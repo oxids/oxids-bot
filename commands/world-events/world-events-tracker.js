@@ -112,7 +112,7 @@ module.exports = {
 				tracker.deferReply = async function() {};
 				tracker.followUp = async function() {};
 
-				await this.execute(tracker);
+				await this.execute(tracker, client);
 
 				LogHelper.writeToLog('Started an World Event tracker for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
 			} catch (e) {
@@ -128,7 +128,7 @@ module.exports = {
 		console.log('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
 		LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
 	},
-	async execute(interaction) {
+	async execute(interaction, client) {
 		let collector, interval;
 
 		// Checks if the command was executed from memory
@@ -795,10 +795,11 @@ module.exports = {
 							if (previousLeader?.toUpperCase() === username?.toUpperCase()) {
 								modalInteraction.deferUpdate();
 							} else {
-								messagesToDelete.push(await DiscordHelper.reply(modalInteraction, {
+								messagesToDelete.push((await DiscordHelper.reply(modalInteraction, {
 									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username)
-										+ ' as a party leader for party ' + party + '!'
-								}));
+										+ ' as a party leader for party ' + party + '!',
+									withResponse: true
+								}))?.resource?.id);
 							}
 
 							await updateMessage();
@@ -924,19 +925,24 @@ module.exports = {
 				if (!disable30mPing && !thirtyMinutePinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
 					thirtyMinutePinged = true;
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+					initialPinged = true;
+
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
 				// Ping 1h in advance
 				else if (!disable1hPing && !thirtyMinutePinged && !oneHourPinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+					initialPinged = true;
+
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
 				// Ping if it just swapped from prediction to confirmed
 				else if (!initialPinged && !thirtyMinutePinged && !oneHourPinged && (!worldEventData || worldEventData.predicted)) {
 					initialPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 			}
 
@@ -965,12 +971,13 @@ module.exports = {
 				oneHourPinged = false;
 				thirtyMinutePinged = false;
 
-				for (const message of messagesToDelete) {
-					if (!message) {
+				const channelWithMessage = await DiscordHelper.fetch(channel);
+				for (const messageToDelete of messagesToDelete) {
+					if (!messageToDelete) {
 						continue;
 					}
 
-					await DiscordHelper.delete(message);
+					await DiscordHelper.delete(await DiscordHelper.fetch(channelWithMessage?.messages, messageToDelete));
 				}
 				messagesToDelete = [];
 

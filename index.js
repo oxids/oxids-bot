@@ -78,7 +78,7 @@ try {
         }
 
         try {
-            await command.execute(interaction);
+            await command.execute(interaction, client);
         } catch (error) {
             console.error('index: client.on(): ', error);
             LogHelper.writeToLog('index: client.on(): ' + JSON.stringify(error, Object.getOwnPropertyNames(error)));

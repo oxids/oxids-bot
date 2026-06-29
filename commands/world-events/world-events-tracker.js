@@ -799,7 +799,7 @@ module.exports = {
 									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username)
 										+ ' as a party leader for party ' + party + '!',
 									withResponse: true
-								}))?.resource?.id);
+								}))?.resource?.message?.id);
 							}
 
 							await updateMessage();

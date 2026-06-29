@@ -1103,8 +1103,12 @@ module.exports = {
 
 			// Creates a new message, if the users want it
 			// This will cause the thread to not be embedded correctly, there is nothing that can be done about this at this time
-			if (resendOnUpdate) {
-				await DiscordHelper.delete(message);
+			// Also fallback in case the message could not be sent
+			if (resendOnUpdate || !message) {
+				if (message) {
+					await DiscordHelper.delete(message);
+				}
+
 				message = await DiscordHelper.send(channel, 'Resending message...');
 			}
 
@@ -1113,6 +1117,10 @@ module.exports = {
 				participants = [];
 			}
 			participants.splice(_.findLastIndex(participants, participant => participant.id) + 1);
+
+			if (!message) {
+				return;
+			}
 
 			if (worldEventData.predicted) {
 				DiscordHelper.edit(message, getPredictionMessage());

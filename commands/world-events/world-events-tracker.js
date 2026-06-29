@@ -919,7 +919,10 @@ module.exports = {
 
 			// Pings for the world event
 			if (!newWorldEventData.predicted && pingRole) {
-				const WORLD_EVENT_MESSAGE = worldEvent + ' starts <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + ':R> ' + `<@&${ pingRole }>!`;
+				const WORLD_EVENT_MESSAGE = worldEvent
+					+ ' starts <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + ':R>'
+					+ ' on <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + '>'
+					+ ` <@&${ pingRole }>!`;
 
 				// Ping 30m in advance
 				if (!disable30mPing && !thirtyMinutePinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {

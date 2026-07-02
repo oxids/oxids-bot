@@ -12,7 +12,7 @@ module.exports = {
 
 		if (showHelpPage) {
 			commands = [
-				'Join the Dev server (https://discord.gg/GXx8XJMYkK) or message **oxids** on Discord for support or feature requests!'
+				'Message **oxids** on Discord for support or feature requests!'
 			];
 
 			embeds = _.concat(embeds, DiscordHelper.getEmbeds([{ name: '', value: commands.sort().join('\n\n') }],

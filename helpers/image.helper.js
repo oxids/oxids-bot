@@ -71,8 +71,8 @@ module.exports = {
             const sidePadding = 20;
             const maxWidth = itemWidth - (sidePadding * 2);
 
-            ctx.font = 'bold 15px sans-serif';
-            this.drawTextWithOutline(ctx, getTruncatedText(ctx, cleanString(rewardImageAndText.text), maxWidth), x + (itemWidth / 2), y + itemHeight + 5, rewardImageAndText.textColor, 'black', 3);
+            ctx.font = 'bold 16px sans-serif';
+            this.drawTextWithOutline(ctx, getTruncatedText(ctx, cleanString(rewardImageAndText.text), maxWidth), x + (itemWidth / 2), y + itemHeight + 5, rewardImageAndText.textColor, rewardImageAndText.textOutlineColor, 3);
             if (rewardImageAndText.text2) {
                 ctx.font = 'bold 12px sans-serif';
 
@@ -86,9 +86,9 @@ module.exports = {
                     }
                 }
 
-                this.drawTextWithOutline(ctx, getTruncatedText(ctx, line1, maxWidth), x + (itemWidth / 2), y + itemHeight + 25, rewardImageAndText.textColor, 'black', 3);
+                this.drawTextWithOutline(ctx, getTruncatedText(ctx, line1, maxWidth), x + (itemWidth / 2), y + itemHeight + 25, rewardImageAndText.textColor, rewardImageAndText.textOutlineColor, 3);
                 if (line2.length > 0) {
-                    this.drawTextWithOutline(ctx, getTruncatedText(ctx, line2, maxWidth), x + (itemWidth / 2), y + itemHeight + 40, rewardImageAndText.textColor, 'black', 3);
+                    this.drawTextWithOutline(ctx, getTruncatedText(ctx, line2, maxWidth), x + (itemWidth / 2), y + itemHeight + 40, rewardImageAndText.textColor, textOutlineColor, 3);
                 }
             }
         } catch (e) {
@@ -105,15 +105,16 @@ module.exports = {
         ctx.fillStyle = textColor;
         ctx.fillText(text, x, y);
     },
+    getRewardImageAndText: getRewardImageAndText,
+    getContrastBackdrop: getContrastBackdrop
 }
 
-async function getRewardImageAndText(reward) {
-    let image;
+async function getRewardImageAndText(reward, onlyText = false) {
     let text = reward.name;
     let text2 = '';
     let textColor = '#FFFFFF';
 
-    let imageUrl, itemData;
+    let imageUrl, itemData, icon;
     switch (reward.type) {
         case 'ASPECT':
             textColor = getRarityColor(reward.tier);
@@ -122,6 +123,24 @@ async function getRewardImageAndText(reward) {
             if (itemData?.icon?.value?.name) {
                 text = itemData.name;
                 imageUrl = 'raid-aspects/' + itemData.icon.value.name;
+
+                switch (itemData.icon.value.name) {
+                    case 'abilityTree.aspectArcher':
+                        icon = '<:aspectArcher:1522180571365769226>';
+                        break;
+                    case 'abilityTree.aspectAssassin':
+                        icon = '<:aspectAssassin:1522180602709803079>';
+                        break;
+                    case 'abilityTree.aspectMage':
+                        icon = '<:aspectMage:1522180627405865000>';
+                        break;
+                    case 'abilityTree.aspectShaman':
+                        icon = '<:aspectShaman:1522180658674401482>';
+                        break;
+                    case 'abilityTree.aspectWarrior':
+                        icon = '<:aspectWarrior:1522180685438259250>';
+                        break;
+                }
             }
 
             // Always display text from final tier
@@ -183,6 +202,30 @@ async function getRewardImageAndText(reward) {
 
             textColor = wardData.textColor;
             imageUrl = 'wards/' + wardData.icon;
+
+            switch (wardData.icon) {
+                case 'Blue':
+                    icon = '<:wardBlue:1522182259099045949>';
+                    break;
+                case 'Green':
+                    icon = '<:wardGreen:1522182284378116176>';
+                    break;
+                case 'Orange':
+                    icon = '<:wardOrange:1522182305240842351>';
+                    break;
+                case 'Pink':
+                    icon = '<:wardPink:1522182327118069780>';
+                    break;
+                case 'Purple':
+                    icon = '<:wardPurple:1522182349020991618>';
+                    break;
+                case 'Red':
+                    icon = '<:wardRed:1522182369615020092>';
+                    break;
+                case 'Yellow':
+                    icon = '<:wardYellow:1522182388547977297>';
+                    break;
+            }
             break;
         case 'ITEM':
 
@@ -192,6 +235,11 @@ async function getRewardImageAndText(reward) {
             }
 
             textColor = getRarityColor(reward.tier);
+            switch (reward.tier?.toLowerCase()) {
+                case 'mythic':
+                    icon = '<:boxMythic:1522183759804366968>';
+                    break;
+            }
 
             itemData = _.find(ITEM_DATA, item => reward.name.toLowerCase() === item.displayName?.toLowerCase() && item.type !== "ingredient");
             if (itemData?.icon?.value?.name) {
@@ -201,20 +249,24 @@ async function getRewardImageAndText(reward) {
 
             if (reward.shiny) {
                 text += ' (Shiny)';
+                icon = '<:shinyMythic:1522184398265516082>';
             }
             break;
     }
 
-    try {
-        image = await loadImage( './assets/images/' + (imageUrl ? imageUrl : 'Empty') + '.png');
-    } catch (e) {
-        console.error('Asset could not be loaded: ' + imageUrl + ' ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
-        LogHelper.writeToLog('Asset could not be loaded: ' + imageUrl + ' ' +  JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
+    let image;
+    if (!onlyText) {
+        try {
+            image = await loadImage( './assets/images/' + (imageUrl ? imageUrl : 'Empty') + '.png');
+        } catch (e) {
+            console.error('Asset could not be loaded: ' + imageUrl + ' ' + JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
+            LogHelper.writeToLog('Asset could not be loaded: ' + imageUrl + ' ' +  JSON.stringify(reward, Object.getOwnPropertyNames(reward)));
 
-        image = await loadImage( './assets/images/Empty' + '.png');
+            image = await loadImage( './assets/images/Empty' + '.png');
+        }
     }
 
-    return { image, text, textColor, text2 };
+    return { image, text, textColor, text2, textOutlineColor: getContrastBackdrop(textColor), icon: icon };
 }
 
 function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
@@ -296,4 +348,19 @@ function cleanString(input, removeFinalDot) {
     }
 
     return text;
+}
+
+function getContrastBackdrop(hex) {
+    hex = hex.replace('#', '');
+
+    if (hex.length === 3) {
+        hex = hex.split('').map(char => char + char).join('');
+    }
+
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#000000' : '#F5F5F5';
 }

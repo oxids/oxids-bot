@@ -245,12 +245,14 @@ module.exports = {
             if (initialCall && !interaction.fromMemory) {
                 DiscordHelper.editReply(interaction, {
                     content: text,
-                    files: attachments
+                    files: attachments,
+                    embeds: await createRaidsEmbed(newRaidpool)
                 });
             } else {
                 DiscordHelper.send(interaction.channel, {
                     content: text,
-                    files: attachments
+                    files: attachments,
+                    embeds: await createRaidsEmbed(newRaidpool)
                 });
             }
 
@@ -331,7 +333,7 @@ module.exports = {
                     break;
             }
 
-            ImageHelper.drawTextWithOutline(ctx, raid.name, canvasWidth / 2, 60, ctx.fillStyle, '#000000', 6);
+            ImageHelper.drawTextWithOutline(ctx, raid.name, canvasWidth / 2, 60, ctx.fillStyle, ImageHelper.getContrastBackdrop(ctx.fillStyle), 6);
 
             for (let i = 0; i < raid.rewards.length; i++) {
                 await ImageHelper.createItemImage(ctx, raid.rewards[i], i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding);
@@ -343,6 +345,48 @@ module.exports = {
             ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
             return new AttachmentBuilder(canvas.toBuffer(), { name: `${raid.internalName}.png` });
+        }
+
+        async function createRaidsEmbed(raids) {
+            if (!raids?.length) {
+                return DiscordHelper.getEmbeds([], 1, 'No data :(', DiscordHelper.getBotImage());
+            }
+
+            const fields = [];
+            for (const raid of raids) {
+
+                // Filter rewards and display wards in front
+                if (!raid?.rewards?.length) {
+                    continue;
+                }
+
+                raid.rewards = _.orderBy(_.filter(raid.rewards, reward => {
+                    if (!reward?.type
+                        || (!(reward.type === 'WARD') && !(reward.type === 'ASPECT' && reward.tier === 'MYTHIC'))
+                        || (reward.type === 'TOME' && !reward.tier)) {
+                        return false;
+                    }
+
+                    return true;
+                }), reward => {
+                    switch (reward.type) {
+                        case 'ASPECT':
+                            return 0;
+                        case 'WARD':
+                            return 1;
+                    }
+                });
+
+                const field = { name: raid.name, value: '' };
+                for (const reward of raid.rewards) {
+                    const text = await ImageHelper.getRewardImageAndText(reward, true);
+                    field.value += '- ' + (text.icon ? (text.icon + ' ') : '') + text.text + '\n';
+                }
+
+                fields.push(field);
+            }
+
+            return DiscordHelper.getEmbeds(fields, 1, 'Current Raid Overview', DiscordHelper.getBotImage());
         }
     }
 };

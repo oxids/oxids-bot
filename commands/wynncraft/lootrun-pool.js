@@ -358,7 +358,7 @@ module.exports = {
                     }
 
                     return true;
-                }), reward => {
+                }), [reward => {
                     switch (reward.type) {
                         case 'ITEM':
                             if (reward.shiny) {
@@ -368,7 +368,7 @@ module.exports = {
                         case 'WARD':
                             return 2;
                     }
-                });
+                }, reward => reward.name]);
 
                 const field = { name: lootrun.name, value: '' };
                 for (const reward of lootrun.rewards) {

@@ -368,14 +368,14 @@ module.exports = {
                     }
 
                     return true;
-                }), reward => {
+                }), [reward => {
                     switch (reward.type) {
                         case 'ASPECT':
                             return 0;
                         case 'WARD':
                             return 1;
                     }
-                });
+                }, reward => reward.name]);
 
                 const field = { name: raid.name, value: '' };
                 for (const reward of raid.rewards) {

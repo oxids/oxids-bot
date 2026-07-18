@@ -905,10 +905,18 @@ module.exports = {
 		let initialPinged = false;
 		let oneHourPinged = false;
 		let thirtyMinutePinged = false;
+
+		// Variable to ignore new data
+		// Needed as sometimes Discord API takes a while for certain operations, causing stuff to be run multiple times
+		let blockNewData = false;
+
 		async function processWorldEventData(newWorldEventData) {
-			if (!newWorldEventData) {
+			if (!newWorldEventData || blockNewData) {
 				return;
 			}
+
+			// This function will ignore all new data until the current instance is run through
+			blockNewData = true;
 
 			// It is possible the world event data had to be manually set, because the API did not yet update. Ignore new data in this case
 			if (worldEventData && newWorldEventData.predicted && !worldEventData.predicted && (new Date(worldEventData.datetime_utc).getTime() >= new Date().getTime()
@@ -930,6 +938,7 @@ module.exports = {
 					oneHourPinged = true;
 					initialPinged = true;
 
+					LogHelper.writeToLog('processWorldEventData(): Pinging 30m ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
 					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
@@ -938,6 +947,7 @@ module.exports = {
 					oneHourPinged = true;
 					initialPinged = true;
 
+					LogHelper.writeToLog('processWorldEventData(): Pinging 1h ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
 					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
@@ -945,12 +955,14 @@ module.exports = {
 				else if (!initialPinged && !thirtyMinutePinged && !oneHourPinged && (!worldEventData || worldEventData.predicted)) {
 					initialPinged = true;
 
+					LogHelper.writeToLog('processWorldEventData(): Pinging initial ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
 					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 			}
 
 			// If no data changed, nothing needs to be updated
 			if (newWorldEventData.predicted === worldEventData?.predicted && newWorldEventData.datetime_utc === worldEventData?.datetime_utc) {
+				blockNewData = false;
 				return;
 			}
 
@@ -992,6 +1004,8 @@ module.exports = {
 
 			updateTrackersFile();
 			await updateMessage();
+
+			blockNewData = false;
 		}
 
 		function createThread() {
@@ -1313,7 +1327,7 @@ module.exports = {
 				console.log('world-events-tracker: interval: ', e);
 				LogHelper.writeToLog('world-events-tracker: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 			}
-		}, 1000 * 15 * 1);
+		}, 1000 * 60 * 1);
 
 		if (interaction.fromMemory) {
 			addActiveTracker();

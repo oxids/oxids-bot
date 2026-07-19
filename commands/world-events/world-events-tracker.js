@@ -905,18 +905,10 @@ module.exports = {
 		let initialPinged = false;
 		let oneHourPinged = false;
 		let thirtyMinutePinged = false;
-
-		// Variable to ignore new data
-		// Needed as sometimes Discord API takes a while for certain operations, causing stuff to be run multiple times
-		let blockNewData = false;
-
 		async function processWorldEventData(newWorldEventData) {
-			if (!newWorldEventData || blockNewData) {
+			if (!newWorldEventData) {
 				return;
 			}
-
-			// This function will ignore all new data until the current instance is run through
-			blockNewData = true;
 
 			// It is possible the world event data had to be manually set, because the API did not yet update. Ignore new data in this case
 			if (worldEventData && newWorldEventData.predicted && !worldEventData.predicted && (new Date(worldEventData.datetime_utc).getTime() >= new Date().getTime()
@@ -962,7 +954,6 @@ module.exports = {
 
 			// If no data changed, nothing needs to be updated
 			if (newWorldEventData.predicted === worldEventData?.predicted && newWorldEventData.datetime_utc === worldEventData?.datetime_utc) {
-				blockNewData = false;
 				return;
 			}
 
@@ -1004,8 +995,6 @@ module.exports = {
 
 			updateTrackersFile();
 			await updateMessage();
-
-			blockNewData = false;
 		}
 
 		function createThread() {
@@ -1320,13 +1309,26 @@ module.exports = {
 
 
 		// This interval is started once and used across multiple events.
+
+		// Variable to ignore new data
+		// Needed as sometimes Discord API takes a while for certain operations, causing stuff to be run multiple times
+		let blockNewData = false;
+
 		interval = setInterval(async () => {
+			if (blockNewData) {
+				return;
+			}
+
+			blockNewData = true;
+
 			try {
-				processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
+				await processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
 			} catch (e) {
 				console.log('world-events-tracker: interval: ', e);
 				LogHelper.writeToLog('world-events-tracker: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 			}
+
+			blockNewData = false;
 		}, 1000 * 60 * 1);
 
 		if (interaction.fromMemory) {

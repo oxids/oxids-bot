@@ -1,0 +1,31 @@
+{
+    "token": "YOUR_DISCORD_BOT_TOKEN",
+    "clientId": "YOUR_DISCORD_BOT_CLIENT_ID",
+    "ownerId": "YOUR_DISCORD_ACCOUNT_ID_FOR_OVERRIDING_RIGHTS_CHECKS",
+
+    "applicationChannel": "PROF_ADMIN_CHANNEL_ID",
+    "applicationServer": "PROF_DISCORD_SERVER_ID",
+    "applicationGuildName": "PROF_SERVER_NAME",
+
+    "trackedGuilds": ["GUILDS_TO_TRACK_XP_FOR"],
+    "trustedWorldEventScouts": [
+        {
+            "discordName": "MINECRAFT_USERNAME",
+            "discordId": "THEIR_DISCORD_ID"
+        }
+    ],
+    "trustedVerifiers": [
+        {
+            "discordName": "MINECRAFT_USERNAME",
+            "discordId": "THEIR_DISCORD_ID"
+        }
+    ],
+
+    "catAPIKey": "API_KEY_FOR_CATS_API",
+    "dogAPIKey": "API_KEY_FOR_DOGS_API",
+    "wynnAPIToken": "API_KEY_FOR_WYNNCRAFT_API",
+
+    "seqDBURL": "SEQ_DB_URL",
+    "seqDBUsername": "SEQ_DB_USERNAME",
+    "seqDBPassword": "SEQ_DB_PASSWORD"
+}

@@ -58,11 +58,18 @@ LogHelper.writeToLog('\n\n\n');
 LogHelper.writeToLog('index: Starting...');
 
 try {
-    const client = new Client({ intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers
-    ] });
+    const client = new Client({
+        rest: {
+            // Disables automatic retries on timeouts/errors
+            // Needed because Discord API is bad and this causes messages to be sent multiple times
+            retries: 0
+        },
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.GuildMembers
+        ]
+    });
     setCommands(client);
     setEvents(client);
 

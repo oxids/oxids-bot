@@ -63,7 +63,7 @@ module.exports = {
                             .setStyle(TextInputStyle.Paragraph)
                             .setMaxLength(500)),
                     new LabelBuilder()
-                        .setLabel('How did you find our guild?')
+                        .setLabel('How did you find our Guild?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('howFound')
                             .setRequired(true)

@@ -1,4 +1,4 @@
-const { ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder} = require('discord.js');
+const { ChannelType, ButtonBuilder, ButtonStyle, PermissionFlagsBits, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder} = require('discord.js');
 const DiscordHelper = require('../../helpers/discord.helper.js');
 const LogHelper = require('../../helpers/log.helper.js');
 var _ = require('lodash');
@@ -120,6 +120,47 @@ module.exports = {
 
                 DiscordHelper.edit(message, messageText);
                 DiscordHelper.reply(modalInteraction, { content: 'Your application was submitted! You should be hearing back from us within 24 hours.', ephemeral: true });
+
+                applicationChannel = await DiscordHelper.create(i.guild.channels, {
+                    name: 'application-' + user.username,
+                    type: ChannelType.GuildText,
+                    permissionOverwrites: [
+                        {
+                            // Deny access to @everyone
+                            id: i.guild.id,
+                            deny: [PermissionFlagsBits.ViewChannel],
+                        },
+                        {
+                            // Chief
+                            id: '1527290814269489354',
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                        },
+                        {
+                            // Strat
+                            id: '1527290817864142860',
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                        },
+                        {
+                            // Captain
+                            id: '1527290820481253456',
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                        },
+                        {
+                            // Recruiter
+                            id: '1527290831973646407',
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                        },
+                        {
+                            // User who made the ticket
+                            id: i.member.id,
+                            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+                        },
+                    ],
+                });
+
+                if (applicationChannel) {
+                    DiscordHelper.send(applicationChannel, { content: 'Hey <@' + i.member.id + '>, thanks for your application. We will reach out to you via this channel, once your application has been reviewed. If you have any questions, let us know at any time!' });
+                }
                 break;
 
             default:

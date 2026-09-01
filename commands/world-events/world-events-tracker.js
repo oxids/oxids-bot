@@ -45,6 +45,18 @@ module.exports = {
 		.addBooleanOption(option =>
 			option.setName('disable')
 				.setDescription('Set to true if you want the bot to stop tracking world events'))
+		.addRoleOption(option =>
+			option.setName('participation-role')
+				.setDescription('Only users with this role can participate (Default: None)'))
+		.addNumberOption(option =>
+			option.setName('participation-hours')
+				.setDescription('How many hours before the event can users w/o the participation role join anyways (Default: None)'))
+		.addBooleanOption(option =>
+			option.setName('participation-priority')
+				.setDescription('Set to true if you want users with the participation role take the party slots of users without'))
+		.addNumberOption(option =>
+			option.setName('participation-priority-minutes')
+				.setDescription('How many minutes before the event can users take others party slots (Default: 60)'))
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.setDMPermission(false),
 	async onStartup(client) {
@@ -133,10 +145,14 @@ module.exports = {
 
 		// Checks if the command was executed from memory
 		let messagesToDelete = [];
-		let channel, message, thread, disable, pingRole, participants, worldEventData, trackerId, resendOnUpdate, disable1hPing, disable30mPing, worldEvent;
+		let channel, message, thread, disable, pingRole, participationRole, participationHours, participationPriority, participationPriorityMinutes, participants, worldEventData, trackerId, resendOnUpdate, disable1hPing, disable30mPing, worldEvent;
 		if (interaction.fromMemory) {
 			channel = interaction.options.channel;
 			pingRole = interaction.options.pingRole;
+			participationRole = interaction.options.participationRole;
+			participationHours = interaction.options.participationHours;
+			participationPriority = interaction.options.participationPriority;
+			participationPriorityMinutes = interaction.options.participationPriorityMinutes;
 			participants = interaction.participants;
 			message = interaction.message;
 			thread = interaction.thread;
@@ -159,6 +175,10 @@ module.exports = {
 			channel = interaction.options.getChannel('channel') ?? interaction.channel;
 			disable = interaction.options.getBoolean('disable');
 			pingRole = interaction.options.getRole('ping-role')?.id;
+			participationRole = interaction.options.getRole('participation-role')?.id;
+			participationHours = interaction.options.getNumber('participation-hours');
+			participationPriority = interaction.options.getBoolean('participation-priority');
+			participationPriorityMinutes = interaction.options.getNumber('participation-priority-minutes') ?? 60;
 			participants = [];
 			message = null;
 			thread = null;
@@ -233,6 +253,10 @@ module.exports = {
 					options: {
 						channel: channel.id,
 						pingRole: pingRole,
+						participationRole: participationRole,
+						participationHours: participationHours,
+						participationPriority: participationPriority,
+						participationPriorityMinutes: participationPriorityMinutes,
 						resendOnUpdate: resendOnUpdate,
 						disable1hPing: disable1hPing,
 						disable30mPing: disable30mPing,
@@ -301,6 +325,7 @@ module.exports = {
 					switch (_.last(i.customId.split(':'))) {
 						case 'enter':
 
+							// User cant join bc of punishments
                             const punishments = await WorldEventsPunishmentHelper.getPunishments(interaction.guild.id, i.user.id, null, true);
                             if (_.find(punishments, p => p.type === 'ban')) {
                                 DiscordHelper.reply(i, { content: 'You are banned from the current ' + worldEvent + ' party!\nIf you believe this to be an error, please contact any Chief privately.', ephemeral: true });
@@ -315,10 +340,23 @@ module.exports = {
                                 }
                             }
 
+							// User cant join bc of participation role
+							if (participationRole && !i.member.roles.cache.some(r => r.id === participationRole)) {
+								if (!participationHours) {
+									DiscordHelper.reply(i, { content: 'You need the <@&' + participationRole + '> role to join this party!', ephemeral: true });
+									break;
+								}
+
+								if ((new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * 60 * participationHours) {
+									DiscordHelper.reply(i, { content: 'You need the <@&' + participationRole + '> role to join this party more than ' + participationHours + 'h before the event!', ephemeral: true });
+									break;
+								}
+							}
+
 							existingParticipants = _.filter(participants, participant => participant.id === i.user.id);
 
 							// Allow users to freely choose party
-							partiesWithSpace = getPartiesWithSpace();
+							partiesWithSpace = await getPartiesWithSpace(i.member.roles);
 							if (!partiesWithSpace?.length) {
 								DiscordHelper.reply(i, { content: 'All 50 party slots are full. You guys sure have a lot of people participating!', ephemeral: true });
 								break;
@@ -425,6 +463,14 @@ module.exports = {
 								break;
 							}
 
+							if (!_.find(await getPartiesWithSpace(i.member.roles), p => p.value === party)) {
+								await DiscordHelper.reply(modalInteraction, {
+									content: 'This party is already full!',
+									ephemeral: true
+								});
+								break;
+							}
+
 							// Default role (DPS, Heal, ...)
 							let partyRole = undefined;
 							if (build) {
@@ -443,7 +489,7 @@ module.exports = {
 								}
 							}
 
-							addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
+							await addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
 								partyRole: partyRole }, party);
 							await DiscordHelper.reply(modalInteraction, {
 								content: 'You entered ' + username + ' to the party. Get that Hana! 🔥'
@@ -464,7 +510,7 @@ module.exports = {
 							}
 
 							// Allow users to freely choose party
-							partiesWithSpace = getPartiesWithSpace(existingParticipants.map(p => p.name));
+							partiesWithSpace = await getPartiesWithSpace(i.member.roles, existingParticipants.map(p => p.name));
 							if (!partiesWithSpace?.length) {
 								DiscordHelper.reply(i, { content: 'All 50 party slots are full. You guys sure have a lot of people participating!', ephemeral: true });
 								break;
@@ -602,7 +648,7 @@ module.exports = {
 								? Number(modalInteraction.fields.getStringSelectValues('party')[0])
 								: currentParty;
 
-							if (party !== currentParty && !_.find(getPartiesWithSpace(), p => p.value === party)) {
+							if (party !== currentParty && !_.find(await getPartiesWithSpace(i.member.roles), p => p.value === party)) {
 								await DiscordHelper.reply(modalInteraction, {
 									content: 'This party is already full!',
 									ephemeral: true
@@ -611,7 +657,7 @@ module.exports = {
 							}
 
 							removeParticipant(_.find(participants, participant => participant.name?.toUpperCase() === username?.toUpperCase()));
-							addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
+							await addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
 								partyRole: existingParticipant.partyRole, partyLeader: existingParticipant.partyLeader,
 								partyWorld: existingParticipant.partyWorld }, party);
 
@@ -862,7 +908,7 @@ module.exports = {
 			return existingParticipants?.length <= 25;
 		}
 
-		function getPartiesWithSpace(ignoredExistingUsernames = null) {
+		async function getPartiesWithSpace(userRoles, ignoredExistingUsernames = null) {
 			const highestParty = (Math.floor(_.findLastIndex(participants, participant => participant.id) / 10)) + 1;
 
 			const partiesWithSpace = [];
@@ -874,7 +920,13 @@ module.exports = {
 
 				let spaceFound = false;
 				for (let j = (i - 1) * 10; j < i * 10 && j < participants.length && !spaceFound; j++) {
-					if (!participants[j].id || _.find(ignoredExistingUsernames, u => u === participants[j].name)) {
+					if (!participants[j].id
+						|| _.find(ignoredExistingUsernames, u => u === participants[j].name)
+						|| (participationPriority
+							&& participationRole
+							&& (!participationPriorityMinutes || (new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * participationPriorityMinutes)
+							&& userRoles.cache.some(r => r.id === participationRole)
+							&& !(await DiscordHelper.fetch(interaction.guild.members, participants[j].id))?.roles.cache.some(r => r.id === participationRole))) {
 						partiesWithSpace.push(i);
 						spaceFound = true;
 					}
@@ -1056,7 +1108,7 @@ module.exports = {
 			}
 		}
 
-		function addParticipant(participant, party) {
+		async function addParticipant(participant, party) {
 			const missingParticipants = ((party - 1) * 10) - participants.length;
 			if (missingParticipants > 0) {
 				for (let i = 0; i < missingParticipants; i++) {
@@ -1071,10 +1123,39 @@ module.exports = {
 				}
 			}
 
+			// Backup, if party is full but person can join due to Participation Role priority
+			let replacedParticipant = null;
+			if (foundIndex === -1
+				&& participationRole
+				&& participationPriority
+				&& (!participationPriorityMinutes || (new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * participationPriorityMinutes)
+				&& (await DiscordHelper.fetch(interaction.guild.members, participant.id))?.roles.cache.some(r => r.id === participationRole)) {
+
+					let cachedMembers = [];
+
+					// Reverse, so newest entries get kicked first
+					for (let i = Math.min(party * 10 - 1, participants.length - 1); i >= (party - 1) * 10 && foundIndex === -1; i--) {
+						let member = _.find(cachedMembers, m => m.id === participants[i].id)?.member;
+						if (!member) {
+							member = await DiscordHelper.fetch(interaction.guild.members, participants[i].id);
+							cachedMembers.push({ id: participants[i].id, member: member });
+						}
+
+						if (!member?.roles.cache.some(r => r.id === participationRole)) {
+							foundIndex = i;
+							replacedParticipant = _.cloneDeep(participants[i]);
+						}
+					}
+			}
+
 			if (foundIndex > -1) {
 				participants[foundIndex] = participant;
 			} else {
 				participants.push(participant);
+			}
+
+			if (replacedParticipant) {
+				await addParticipant(replacedParticipant, party);
 			}
 		}
 

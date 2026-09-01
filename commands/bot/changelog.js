@@ -83,6 +83,29 @@ function getHeader(type) {
 
 function getChangelog() {
 	return [
+		{ date: '2026-09-01', version: '1.0.3.7', content: [
+			{ type: TYPE_ENUM.EDIT, command: '/world-events-tracker',
+				description: 'Fix party leader messages not being deleted correctly.' },
+			{ type: TYPE_ENUM.EDIT, command: '/world-events-tracker',
+				description: 'Remove party leader & party world fields, if they are unset.' },
+			{ type: TYPE_ENUM.EDIT, command: '/world-events-tracker',
+				description: 'Add full datetime to ping messages.' },
+			{ type: TYPE_ENUM.EDIT,
+				description: 'Disabled retries on failed Discord API calls, which caused unintended behavior.' },
+			{ type: TYPE_ENUM.ADD, command: '/raid-pool',
+				description: 'Add tome & aspect description below the name, added summery of important items.' },
+			{ type: TYPE_ENUM.ADD, command: '/lootrun-pool',
+				description: 'Add tome description below the name, added summery of important items.' },
+			{ type: TYPE_ENUM.ADD, command: '/world-events-tracker',
+				description: 'Add participation-role parameter to only allow people with this role to join.' },
+			{ type: TYPE_ENUM.ADD, command: '/world-events-tracker',
+				description: 'Add participation-hours parameter to allow people without the role to join X hours before the event.' },
+			{ type: TYPE_ENUM.ADD, command: '/world-events-tracker',
+				description: 'Add participation-priority parameter to allow people with the participation role to replace people without it.' },
+			{ type: TYPE_ENUM.ADD, command: '/world-events-tracker',
+				description: 'Add participation-priority-minutes parameter to allow people without the role to only be replaced X minutes before the event.' },
+		]},
+
 		{ date: '2026-06-30', version: '1.0.3.6', content: [
 			{ type: TYPE_ENUM.ADD, command: '/raid-pool',
 				description: 'Add command to show the current raid pool & automatically post updates.' },

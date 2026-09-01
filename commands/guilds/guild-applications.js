@@ -8,6 +8,7 @@ var _ = require('lodash');
 const DefaultLayout = require("../../assets/guild-application-layouts/_Default");
 const DevLayout = require("../../assets/guild-application-layouts/Dev");
 const ProfessionHeavenLayout = require("../../assets/guild-application-layouts/Profession Heaven");
+const NebelwachtLayout = require("../../assets/guild-application-layouts/Nebelwacht");
 
 const APPLICATION_TRACKERS_FILENAME = './assets/application-trackers.json';
 
@@ -117,15 +118,15 @@ module.exports = {
 		// Checks if the guild has applications enabled
 		let layout;
 		switch (interaction.guild.id) {
-			case '9250628631088579561':
+			case '925062863108857956':
 				layout = DevLayout;
 				break;
 			case '920506925186154567':
 				layout = ProfessionHeavenLayout;
 				break;
-			/*case '837345552785473567':
-				layout = GermanyLayout;
-				break;*/
+			case '1526981705926185111':
+				layout = NebelwachtLayout;
+				break;
 			default:
 				layout = DefaultLayout;
 

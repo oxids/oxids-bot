@@ -45,6 +45,18 @@ module.exports = {
 		.addBooleanOption(option =>
 			option.setName('disable')
 				.setDescription('Set to true if you want the bot to stop tracking world events'))
+		.addRoleOption(option =>
+			option.setName('participation-role')
+				.setDescription('Only users with this role can participate (Default: None)'))
+		.addNumberOption(option =>
+			option.setName('participation-hours')
+				.setDescription('How many hours before the event can users w/o the participation role join anyways (Default: None)'))
+		.addBooleanOption(option =>
+			option.setName('participation-priority')
+				.setDescription('Set to true if you want users with the participation role take the party slots of users without'))
+		.addNumberOption(option =>
+			option.setName('participation-priority-minutes')
+				.setDescription('How many minutes before the event can users take others party slots (Default: 60)'))
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.setDMPermission(false),
 	async onStartup(client) {
@@ -112,7 +124,7 @@ module.exports = {
 				tracker.deferReply = async function() {};
 				tracker.followUp = async function() {};
 
-				await this.execute(tracker);
+				await this.execute(tracker, client);
 
 				LogHelper.writeToLog('Started an World Event tracker for server ' + guild.id + ' ' + (guild.name || 'n/A') + '!\n');
 			} catch (e) {
@@ -128,15 +140,19 @@ module.exports = {
 		console.log('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
 		LogHelper.writeToLog('Actually started ' + activeTrackers.length + ' World Event trackers from memory!');
 	},
-	async execute(interaction) {
+	async execute(interaction, client) {
 		let collector, interval;
 
 		// Checks if the command was executed from memory
 		let messagesToDelete = [];
-		let channel, message, thread, disable, pingRole, participants, worldEventData, trackerId, resendOnUpdate, disable1hPing, disable30mPing, worldEvent;
+		let channel, message, thread, disable, pingRole, participationRole, participationHours, participationPriority, participationPriorityMinutes, participants, worldEventData, trackerId, resendOnUpdate, disable1hPing, disable30mPing, worldEvent;
 		if (interaction.fromMemory) {
 			channel = interaction.options.channel;
 			pingRole = interaction.options.pingRole;
+			participationRole = interaction.options.participationRole;
+			participationHours = interaction.options.participationHours;
+			participationPriority = interaction.options.participationPriority;
+			participationPriorityMinutes = interaction.options.participationPriorityMinutes;
 			participants = interaction.participants;
 			message = interaction.message;
 			thread = interaction.thread;
@@ -159,6 +175,10 @@ module.exports = {
 			channel = interaction.options.getChannel('channel') ?? interaction.channel;
 			disable = interaction.options.getBoolean('disable');
 			pingRole = interaction.options.getRole('ping-role')?.id;
+			participationRole = interaction.options.getRole('participation-role')?.id;
+			participationHours = interaction.options.getNumber('participation-hours');
+			participationPriority = interaction.options.getBoolean('participation-priority');
+			participationPriorityMinutes = interaction.options.getNumber('participation-priority-minutes') ?? 60;
 			participants = [];
 			message = null;
 			thread = null;
@@ -233,6 +253,10 @@ module.exports = {
 					options: {
 						channel: channel.id,
 						pingRole: pingRole,
+						participationRole: participationRole,
+						participationHours: participationHours,
+						participationPriority: participationPriority,
+						participationPriorityMinutes: participationPriorityMinutes,
 						resendOnUpdate: resendOnUpdate,
 						disable1hPing: disable1hPing,
 						disable30mPing: disable30mPing,
@@ -301,6 +325,7 @@ module.exports = {
 					switch (_.last(i.customId.split(':'))) {
 						case 'enter':
 
+							// User cant join bc of punishments
                             const punishments = await WorldEventsPunishmentHelper.getPunishments(interaction.guild.id, i.user.id, null, true);
                             if (_.find(punishments, p => p.type === 'ban')) {
                                 DiscordHelper.reply(i, { content: 'You are banned from the current ' + worldEvent + ' party!\nIf you believe this to be an error, please contact any Chief privately.', ephemeral: true });
@@ -315,10 +340,23 @@ module.exports = {
                                 }
                             }
 
+							// User cant join bc of participation role
+							if (participationRole && !i.member.roles.cache.some(r => r.id === participationRole)) {
+								if (!participationHours) {
+									DiscordHelper.reply(i, { content: 'You need the <@&' + participationRole + '> role to join this party!', ephemeral: true });
+									break;
+								}
+
+								if ((new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * 60 * participationHours) {
+									DiscordHelper.reply(i, { content: 'You need the <@&' + participationRole + '> role to join this party more than ' + participationHours + 'h before the event!', ephemeral: true });
+									break;
+								}
+							}
+
 							existingParticipants = _.filter(participants, participant => participant.id === i.user.id);
 
 							// Allow users to freely choose party
-							partiesWithSpace = getPartiesWithSpace();
+							partiesWithSpace = await getPartiesWithSpace(i.member.roles);
 							if (!partiesWithSpace?.length) {
 								DiscordHelper.reply(i, { content: 'All 50 party slots are full. You guys sure have a lot of people participating!', ephemeral: true });
 								break;
@@ -425,6 +463,14 @@ module.exports = {
 								break;
 							}
 
+							if (!_.find(await getPartiesWithSpace(i.member.roles), p => p.value === party)) {
+								await DiscordHelper.reply(modalInteraction, {
+									content: 'This party is already full!',
+									ephemeral: true
+								});
+								break;
+							}
+
 							// Default role (DPS, Heal, ...)
 							let partyRole = undefined;
 							if (build) {
@@ -443,7 +489,7 @@ module.exports = {
 								}
 							}
 
-							addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
+							await addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
 								partyRole: partyRole }, party);
 							await DiscordHelper.reply(modalInteraction, {
 								content: 'You entered ' + username + ' to the party. Get that Hana! 🔥'
@@ -464,7 +510,7 @@ module.exports = {
 							}
 
 							// Allow users to freely choose party
-							partiesWithSpace = getPartiesWithSpace(existingParticipants.map(p => p.name));
+							partiesWithSpace = await getPartiesWithSpace(i.member.roles, existingParticipants.map(p => p.name));
 							if (!partiesWithSpace?.length) {
 								DiscordHelper.reply(i, { content: 'All 50 party slots are full. You guys sure have a lot of people participating!', ephemeral: true });
 								break;
@@ -602,7 +648,7 @@ module.exports = {
 								? Number(modalInteraction.fields.getStringSelectValues('party')[0])
 								: currentParty;
 
-							if (party !== currentParty && !_.find(getPartiesWithSpace(), p => p.value === party)) {
+							if (party !== currentParty && !_.find(await getPartiesWithSpace(i.member.roles), p => p.value === party)) {
 								await DiscordHelper.reply(modalInteraction, {
 									content: 'This party is already full!',
 									ephemeral: true
@@ -611,7 +657,7 @@ module.exports = {
 							}
 
 							removeParticipant(_.find(participants, participant => participant.name?.toUpperCase() === username?.toUpperCase()));
-							addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
+							await addParticipant({ id: i.user.id, name: username, info: info, build: build, scrolls: scrolls,
 								partyRole: existingParticipant.partyRole, partyLeader: existingParticipant.partyLeader,
 								partyWorld: existingParticipant.partyWorld }, party);
 
@@ -795,10 +841,11 @@ module.exports = {
 							if (previousLeader?.toUpperCase() === username?.toUpperCase()) {
 								modalInteraction.deferUpdate();
 							} else {
-								messagesToDelete.push(await DiscordHelper.reply(modalInteraction, {
+								messagesToDelete.push((await DiscordHelper.reply(modalInteraction, {
 									content: `<@${i.user.id}>` + ' has set ' + DiscordHelper.sanitizeString(username)
-										+ ' as a party leader for party ' + party + '!'
-								}));
+										+ ' as a party leader for party ' + party + '!',
+									withResponse: true
+								}))?.resource?.message?.id);
 							}
 
 							await updateMessage();
@@ -861,7 +908,7 @@ module.exports = {
 			return existingParticipants?.length <= 25;
 		}
 
-		function getPartiesWithSpace(ignoredExistingUsernames = null) {
+		async function getPartiesWithSpace(userRoles, ignoredExistingUsernames = null) {
 			const highestParty = (Math.floor(_.findLastIndex(participants, participant => participant.id) / 10)) + 1;
 
 			const partiesWithSpace = [];
@@ -873,7 +920,13 @@ module.exports = {
 
 				let spaceFound = false;
 				for (let j = (i - 1) * 10; j < i * 10 && j < participants.length && !spaceFound; j++) {
-					if (!participants[j].id || _.find(ignoredExistingUsernames, u => u === participants[j].name)) {
+					if (!participants[j].id
+						|| _.find(ignoredExistingUsernames, u => u === participants[j].name)
+						|| (participationPriority
+							&& participationRole
+							&& (!participationPriorityMinutes || (new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * participationPriorityMinutes)
+							&& userRoles.cache.some(r => r.id === participationRole)
+							&& !(await DiscordHelper.fetch(interaction.guild.members, participants[j].id))?.roles.cache.some(r => r.id === participationRole))) {
 						partiesWithSpace.push(i);
 						spaceFound = true;
 					}
@@ -918,25 +971,36 @@ module.exports = {
 
 			// Pings for the world event
 			if (!newWorldEventData.predicted && pingRole) {
-				const WORLD_EVENT_MESSAGE = worldEvent + ' starts <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + ':R> ' + `<@&${ pingRole }>!`;
+				const WORLD_EVENT_MESSAGE = worldEvent
+					+ ' starts <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + ':R>'
+					+ ' on <t:' + Math.floor(new Date(newWorldEventData.datetime_utc).getTime() / 1000) + '>'
+					+ ` <@&${ pingRole }>!`;
 
 				// Ping 30m in advance
 				if (!disable30mPing && !thirtyMinutePinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 30)) {
 					thirtyMinutePinged = true;
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+					initialPinged = true;
+
+					LogHelper.writeToLog('processWorldEventData(): Pinging 30m ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
 				// Ping 1h in advance
 				else if (!disable1hPing && !thirtyMinutePinged && !oneHourPinged && (new Date(newWorldEventData.datetime_utc) - new Date()) < (1000 * 60 * 60 * 1)) {
 					oneHourPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+					initialPinged = true;
+
+					LogHelper.writeToLog('processWorldEventData(): Pinging 1h ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 
 				// Ping if it just swapped from prediction to confirmed
 				else if (!initialPinged && !thirtyMinutePinged && !oneHourPinged && (!worldEventData || worldEventData.predicted)) {
 					initialPinged = true;
-					messagesToDelete.push(await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE));
+
+					LogHelper.writeToLog('processWorldEventData(): Pinging initial ping on server ' + interaction.guild.id + ' in channel ' + channel.id + '!');
+					messagesToDelete.push((await DiscordHelper.send(channel, WORLD_EVENT_MESSAGE))?.id);
 				}
 			}
 
@@ -965,12 +1029,13 @@ module.exports = {
 				oneHourPinged = false;
 				thirtyMinutePinged = false;
 
-				for (const message of messagesToDelete) {
-					if (!message) {
+				const channelWithMessage = await DiscordHelper.fetch(channel);
+				for (const messageToDelete of messagesToDelete) {
+					if (!messageToDelete) {
 						continue;
 					}
 
-					await DiscordHelper.delete(message);
+					await DiscordHelper.delete(await DiscordHelper.fetch(channelWithMessage?.messages, messageToDelete));
 				}
 				messagesToDelete = [];
 
@@ -1043,7 +1108,7 @@ module.exports = {
 			}
 		}
 
-		function addParticipant(participant, party) {
+		async function addParticipant(participant, party) {
 			const missingParticipants = ((party - 1) * 10) - participants.length;
 			if (missingParticipants > 0) {
 				for (let i = 0; i < missingParticipants; i++) {
@@ -1058,10 +1123,39 @@ module.exports = {
 				}
 			}
 
+			// Backup, if party is full but person can join due to Participation Role priority
+			let replacedParticipant = null;
+			if (foundIndex === -1
+				&& participationRole
+				&& participationPriority
+				&& (!participationPriorityMinutes || (new Date(worldEventData.datetime_utc) - new Date()) >= 1000 * 60 * participationPriorityMinutes)
+				&& (await DiscordHelper.fetch(interaction.guild.members, participant.id))?.roles.cache.some(r => r.id === participationRole)) {
+
+					let cachedMembers = [];
+
+					// Reverse, so newest entries get kicked first
+					for (let i = Math.min(party * 10 - 1, participants.length - 1); i >= (party - 1) * 10 && foundIndex === -1; i--) {
+						let member = _.find(cachedMembers, m => m.id === participants[i].id)?.member;
+						if (!member) {
+							member = await DiscordHelper.fetch(interaction.guild.members, participants[i].id);
+							cachedMembers.push({ id: participants[i].id, member: member });
+						}
+
+						if (!member?.roles.cache.some(r => r.id === participationRole)) {
+							foundIndex = i;
+							replacedParticipant = _.cloneDeep(participants[i]);
+						}
+					}
+			}
+
 			if (foundIndex > -1) {
 				participants[foundIndex] = participant;
 			} else {
 				participants.push(participant);
+			}
+
+			if (replacedParticipant) {
+				await addParticipant(replacedParticipant, party);
 			}
 		}
 
@@ -1096,8 +1190,12 @@ module.exports = {
 
 			// Creates a new message, if the users want it
 			// This will cause the thread to not be embedded correctly, there is nothing that can be done about this at this time
-			if (resendOnUpdate) {
-				await DiscordHelper.delete(message);
+			// Also fallback in case the message could not be sent
+			if (resendOnUpdate || !message) {
+				if (message) {
+					await DiscordHelper.delete(message);
+				}
+
 				message = await DiscordHelper.send(channel, 'Resending message...');
 			}
 
@@ -1106,6 +1204,10 @@ module.exports = {
 				participants = [];
 			}
 			participants.splice(_.findLastIndex(participants, participant => participant.id) + 1);
+
+			if (!message) {
+				return;
+			}
 
 			if (worldEventData.predicted) {
 				DiscordHelper.edit(message, getPredictionMessage());
@@ -1202,36 +1304,46 @@ module.exports = {
 			let partyEmbeds = _.map(parties, (party, index) => {
 
 				// Header
-				const partyLeader = _.find(party, person => person.partyLeader);
 				const headerFields = [
 					{ name: 'Slots', value: _.filter(party, p => !!p.id).length + ' / 10', inline: true },
-					{ name: 'Region', value: partyLeader?.partyWorld
-							? getWorldIcon(partyLeader.partyWorld?.toUpperCase()) + ' ' + partyLeader.partyWorld.toUpperCase()
-							: ' ', inline: true },
-					{ name: 'Leader', value: partyLeader?.name ? '👑 ' + partyLeader.name : ' ', inline: true },
 				];
+
+				const partyLeader = _.find(party, person => person.partyLeader);
+				if (partyLeader) {
+					headerFields.push({ name: 'Leader', value: partyLeader?.name ? '👑 ' + partyLeader.name : ' ', inline: true });
+
+					if (partyLeader.partyWorld) {
+						headerFields.push({
+							name: 'Region',
+							value: getWorldIcon(partyLeader.partyWorld?.toUpperCase()) + ' ' + partyLeader.partyWorld.toUpperCase(),
+							inline: true
+						});
+					}
+				}
 
 				// Members
 				let memberFields = _.map(_.filter(party, p => !!p.id), (person, index2) => {
-					const slot = '**' + (index2 % 10 + 1).toString().padStart(2) + '\\. **';
+					const slot = '**' + (index2 % 10 + 1).toString().padStart(2) + '\\) **';
 
 					if (!person.id) {
 						return null;
 					}
 
 					return {
-						value: slot + ' **' + DiscordHelper.sanitizeString(person.name) + '**' + ` <@${person.id}>`
-							+ '\n' + (person.partyRole ? (getPartyRole(person.partyRole).iconSmall ?? '') + ' ' : '') // Small icon bc the custom ones have too many characters
+						value: slot + ' '
+							+ (person.partyRole ? (getPartyRole(person.partyRole).iconSmall ?? '') + ' ' : '') // Small icon bc the custom ones have too many characters
 							+ (person.scrolls ? '📜 ' : '')
-							+ (person.build ? ' *' + DiscordHelper.sanitizeString(person.build) + '*' : '')
-							+ (person.info ? '\n 📝 ' + DiscordHelper.sanitizeString(person.info) : '')
+							+ ' **' + DiscordHelper.sanitizeString(person.name) + '**'
+							+ (person.build ? ' using *' + DiscordHelper.sanitizeString(person.build) + '*' : '')
+							+ ` (<@${person.id}>)`
+							+ (person.info ? '\n  📝' + DiscordHelper.sanitizeString(person.info) : '')
 					};
 				});
 
 				// Available space
 				memberFields = _.filter(memberFields, f => !!f);
 				if (memberFields?.length < 10) {
-					memberFields.push({ value: '**' + (memberFields.length + 1).toString().padStart(2) + '\\. **' + '<Available>' });
+					memberFields.push({ value: '**' + (memberFields.length + 1).toString().padStart(2) + '\\) **' + '<Available>' });
 				}
 
 				return DiscordHelper.getEmbeds(_.concat(headerFields, memberFields), 1,
@@ -1278,14 +1390,27 @@ module.exports = {
 
 
 		// This interval is started once and used across multiple events.
+
+		// Variable to ignore new data
+		// Needed as sometimes Discord API takes a while for certain operations, causing stuff to be run multiple times
+		let blockNewData = false;
+
 		interval = setInterval(async () => {
+			if (blockNewData) {
+				return;
+			}
+
+			blockNewData = true;
+
 			try {
-				processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
+				await processWorldEventData(await WorldEventsHelper.getWorldEventInfo(worldEvent));
 			} catch (e) {
 				console.log('world-events-tracker: interval: ', e);
 				LogHelper.writeToLog('world-events-tracker: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
 			}
-		}, 1000 * 15 * 1);
+
+			blockNewData = false;
+		}, 1000 * 60 * 1);
 
 		if (interaction.fromMemory) {
 			addActiveTracker();

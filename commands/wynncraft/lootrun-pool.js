@@ -17,7 +17,7 @@ let intervals = []; // All intervals across all bot instances
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('lootrun-pool')
-        .setDescription('Displays the current lootrun loot pool and might automatically post updates.')
+        .setDescription('Displays the current lootrun lootpool and might automatically post updates.')
         .addBooleanOption(option =>
             option.setName('post-updates')
                 .setDescription('(Optional) Set to true if changes in the lootrun pool should automatically be posted'))
@@ -112,6 +112,7 @@ module.exports = {
             const hasKick = (await DiscordHelper.fetch(interaction.guild?.members, interaction.user.id))?.permissions?.has(PermissionFlagsBits.KickMembers);
             if (!hasKick) {
                 DiscordHelper.editReply(interaction, 'You don\'t have permissions to do this!');
+                return;
             }
         }
 
@@ -133,7 +134,7 @@ module.exports = {
         if (postUpdates) {
             interval = setInterval(async () => {
                 try {
-                    processLootrunpoolData(await WynnApiHelper.getRaidPool());
+                    processLootrunpoolData(await WynnApiHelper.getLootrunPool());
                 } catch (e) {
                     console.log('lootrun-pool: interval: ', e);
                     LogHelper.writeToLog('lootrun-pool: interval: ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
@@ -244,16 +245,20 @@ module.exports = {
             if (initialCall && !interaction.fromMemory) {
                 DiscordHelper.editReply(interaction, {
                     content: text,
-                    files: attachments
+                    files: attachments,
+                    embeds: await createLootrunsEmbed(newLootrunpool)
                 });
             } else {
                 DiscordHelper.send(interaction.channel, {
                     content: text,
-                    files: attachments
+                    files: attachments,
+                    embeds: await createLootrunsEmbed(newLootrunpool)
                 });
             }
 
-            addActiveTracker();
+            if (postUpdates) {
+                addActiveTracker();
+            }
         }
 
         async function createLootrunImage(lootrun) {
@@ -267,7 +272,8 @@ module.exports = {
             lootrun.rewards = _.orderBy(_.filter(lootrun.rewards, reward => {
                 if (!reward?.type
                     || (reward.type !== 'WARD' && reward.type !== 'ITEM' && reward.type !== 'TOME')
-                    || (reward.type === 'ITEM' && !reward.tier)) {
+                    || (reward.type === 'ITEM' && !reward.tier)
+                    || (reward.type === 'TOME' && !reward.tier)) {
                     return false;
                 }
 
@@ -318,13 +324,62 @@ module.exports = {
             // Header Text
             ctx.font = 'bold 40px sans-serif';
             ctx.fillStyle = '#FFFFFF';
-            ImageHelper.drawTextWithOutline(ctx, lootrun.name, canvasWidth / 2, 60, ctx.fillStyle, '#000000', 6);
+            ImageHelper.drawTextWithOutline(ctx, lootrun.name, canvasWidth / 2, 60, ctx.fillStyle, ImageHelper.getContrastBackdrop(ctx.fillStyle), 6);
 
             for (let i = 0; i < lootrun.rewards.length; i++) {
                 await ImageHelper.createItemImage(ctx, lootrun.rewards[i], i, itemsPerRow, itemHeight, itemWidth, headerHeight, rowHeight, padding);
             }
 
+            // Border
+            ctx.lineWidth = 20;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+
             return new AttachmentBuilder(canvas.toBuffer(), { name: `${lootrun.internalName}.png` });
+        }
+
+        async function createLootrunsEmbed(lootruns) {
+            if (!lootruns?.length) {
+                return DiscordHelper.getEmbeds([], 1, 'No data :(', DiscordHelper.getBotImage());
+            }
+
+            const fields = [];
+            for (const lootrun of lootruns) {
+
+                // Filter rewards and display wards in front
+                if (!lootrun?.rewards?.length) {
+                    continue;
+                }
+
+                lootrun.rewards = _.orderBy(_.filter(lootrun.rewards, reward => {
+                    if (!reward?.type
+                        || (!(reward.type === 'WARD') && !(reward.type === 'ITEM' && reward.tier === 'MYTHIC'))) {
+                        return false;
+                    }
+
+                    return true;
+                }), [reward => {
+                    switch (reward.type) {
+                        case 'ITEM':
+                            if (reward.shiny) {
+                                return 0;
+                            }
+                            return 1;
+                        case 'WARD':
+                            return 2;
+                    }
+                }, reward => reward.name]);
+
+                const field = { name: lootrun.name, value: '' };
+                for (const reward of lootrun.rewards) {
+                    const text = await ImageHelper.getRewardImageAndText(reward, true);
+                    field.value += '- ' + (text.icon ? (text.icon + ' ') : '') + text.text + '\n';
+                }
+
+                fields.push(field);
+            }
+
+            return DiscordHelper.getEmbeds(fields, 1, 'Current Lootrun Overview', DiscordHelper.getBotImage());
         }
     }
 };

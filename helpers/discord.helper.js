@@ -309,6 +309,19 @@ module.exports = {
             return null;
         });
     },
+    create: async function(channels, channel) {
+        if (!channels) {
+            console.error('DiscordHelper.create(): channels is NULL: ', channel);
+            LogHelper.writeToLog('DiscordHelper.create(): channels is NULL: ' + JSON.stringify(channel, Object.getOwnPropertyNames(content)));
+            return null;
+        }
+
+        return await channels.create(channel).then(c => c).catch(error => {
+            console.error('DiscordHelper.create(): ', error);
+            LogHelper.writeToLog('DiscordHelper.create(): ' + JSON.stringify(error, Object.getOwnPropertyNames(error)));
+            return null;
+        });
+    },
 }
 
 

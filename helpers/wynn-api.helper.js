@@ -451,6 +451,28 @@ module.exports = {
 
             return null;
         }
+    },
+    async getAllAspects() {
+        try {
+            let allAspects = [];
+            for (const wynnClass of ['Archer', 'Mage', 'Shaman', 'Warrior', 'Assassin']) {
+                const aspectsJSON = await callWynnApi('/aspects/' + wynnClass.toLowerCase());
+                const aspects = await aspectsJSON?.body?.json();
+                if (!aspects?.length) {
+                    continue;
+                }
+
+                allAspects = _.concat(allAspects, aspects);
+            }
+
+            return allAspects;
+        } catch (e) {
+            console.log(e);
+            console.log('Error in wynn-api-helper: getAllAspects(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+            LogHelper.writeToLog('Error in wynn-api-helper: getAllAspects(): ' + JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+            return null;
+        }
     }
 }
 

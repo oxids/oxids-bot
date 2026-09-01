@@ -26,21 +26,24 @@ const SHOWN_PROFESSIONS = [
 module.exports = {
     getMessage(trackerId) {
         const buttons = [
-            new ButtonBuilder()
+            /*new ButtonBuilder()
                 .setCustomId(trackerId + ':' + 'recruit')
                 .setLabel('Temporary member application')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
                 .setCustomId(trackerId + ':' + 'recruiter')
                 .setLabel('Permanent member application')
+                .setStyle(ButtonStyle.Primary),*/
+            new ButtonBuilder()
+                .setCustomId(trackerId + ':' + 'recruiter')
+                .setLabel('Apply')
                 .setStyle(ButtonStyle.Primary),
         ].filter(b => !!b);
 
         const actionRow = new ActionRowBuilder().addComponents(buttons);
 
-        const embeds = DiscordHelper.getEmbeds([{
-            name: '',
-            value: 'Please click on the role you would like to apply for!' +
+        /*
+        * 'Please click on the role you would like to apply for!' +
                 '\n\n**Temporary members**' +
                 '\nTemporary members are only in PROF for the profession boosts and can leave at any time. Apply via the button or just message any Recruiter or higher ingame to get invited!' +
                 '\n\nRequirements:' +
@@ -49,9 +52,17 @@ module.exports = {
                 '\n\n**Permanent members**' +
                 '\nPermanent members are members of PROF who stay long term and help the guild reclaim territories in case we get attacked.' +
                 '\n\nRequirements:' +
-                '\n- At least one class with combat level 104 or higher' +
+                '\n- At least one class with combat level 120 or higher' +
                 '\n- Access to at least one decent war build' +
                 '\n- At least two weeks of being in PROF as a temporary member before applying'
+        * */
+
+        const embeds = DiscordHelper.getEmbeds([{
+            name: '',
+            value: 'Please click "Apply" to apply!' +
+                '\n\nRequirements:' +
+                '\n- At least one class with combat level 120 or higher' +
+                '\n- Access to at least one decent war build'
         }], 1, 'Guild applications', null, 'Blue');
 
         return {
@@ -142,7 +153,7 @@ module.exports = {
 
                 modal.addLabelComponents(
                     new LabelBuilder()
-                        .setLabel('What\'s your reason to join PROF as a war member?')
+                        .setLabel('What\'s your reason to join PROF?')
                         .setTextInputComponent(new TextInputBuilder()
                             .setCustomId('why')
                             .setRequired(true)

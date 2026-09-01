@@ -1,6 +1,6 @@
 {
   "name": "prof-bot",
-  "version": "1.0.3.6",
+  "version": "1.0.3.7",
   "description": "Discord bot for PROF guild",
   "main": "index.js",
   "scripts": {
